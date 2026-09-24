@@ -2,9 +2,10 @@ import sys
 
 from PySide6.QtWidgets import QApplication, QMainWindow
 
-from Src.Ui.main_window import Ui_MainWindow
-from Src.Devices.Drivers.Nrc_Arm import NrcArm
+from src.ui.main_window import Ui_MainWindow
+from src.devices.drivers.nrc_arm import NrcArm
 
+from src.threads.master_robot_thread import MasterRobotThread
 
 class MainWindow(QMainWindow):
     def __init__(self):
