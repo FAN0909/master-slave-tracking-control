@@ -1,4 +1,4 @@
-from Src.Devices.Base.Base_RobotArm import BaseRobotArm
+from src.devices.base.base_robotArm import BaseRobotArm
 from vendor.nrc import nrc_interface
 
 class NrcArm(BaseRobotArm):
