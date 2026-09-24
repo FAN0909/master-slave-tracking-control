@@ -8,7 +8,8 @@ from src.devices.drivers.nrc_arm import NrcArm
 from src.threads.master_robot_thread import MasterRobotThread
 
 class MainWindow(QMainWindow):
-    # 1. 在 MainWindow 中定义“请求”信号
+
+    #define signals to request actions in the worker thread
     sig_request_connect = Signal()
     sig_request_disconnect = Signal()
     sig_request_enable = Signal()
@@ -20,10 +21,24 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        # 2. 私有状态变量
         self.if_master_connected = False
         self.if_slave_power_on = False
 
+        self.init_thread()
+        self.init_ui_state()
+
+
+    def init_ui_state(self):
+        #Bind button click command
+        self.ui.Btn_robot_connect.clicked.connect(self.on_Btn_robot_connect_clicked)
+        self.ui.pushButton_robot_PowerOn.clicked.connect(self.on_pushButton_robot_PowerOn_clicked)
+
+    def init_thread(self):
+        #init master arm thread
+        self.init_master_arm_thread()       
+
+    #================= 主臂 =====================
+    def init_master_arm_thread(self):
         # 3. 实例化硬件
         self.nrc_arm = NrcArm(name="NrcArm", ip_address="192.168.2.14", port=6001)
 
@@ -47,71 +62,62 @@ class MainWindow(QMainWindow):
 
         self.master_arm_thread.start()
 
-
-
-        # 6. 绑定 UI 按钮点击 -> 触发本地逻辑（判断发哪个请求信号）
-        self.ui.Btn_robot_connect.clicked.connect(self.on_Btn_robot_connect_clicked)
-        self.ui.pushButton_robot_PowerOn.clicked.connect(self.on_pushButton_robot_PowerOn_clicked)
-
-    # ================= UI 按钮点击事件（判断状态，发射请求信号） =================
-
     def on_Btn_robot_connect_clicked(self):
-        # UI 自己维护状态，决定是请求连接还是请求断开
         if self.if_master_connected:
-            self.ui.label.setText("正在断开连接...")
-            self.sig_request_disconnect.emit()  # 发射请求断开信号
+            self.ui.label.setText("Disconnecting...")
+            self.sig_request_disconnect.emit() 
         else:
-            self.ui.label.setText("正在连接...")
-            self.sig_request_connect.emit()     # 发射请求连接信号
+            self.ui.label.setText("Connecting...")
+            self.sig_request_connect.emit()    
 
     def on_pushButton_robot_PowerOn_clicked(self):
         if not self.if_master_connected:
-            self.ui.label.setText("请先连接机器人")
+            self.ui.label.setText("Please connect the robot first")
             return
 
         if self.if_slave_power_on:
-            self.ui.label.setText("正在下使能...")
-            self.sig_request_disable.emit()     # 发射请求下使能信号
+            self.ui.label.setText("Disabling...")
+            self.sig_request_disable.emit()    
         else:
-            self.ui.label.setText("正在上使能...")
-            self.sig_request_enable.emit()      # 发射请求上使能信号
+            self.ui.label.setText("Enabling...")
+            self.sig_request_enable.emit()      
 
     # ================= 子线程执行完毕的回调（负责更新UI和状态） =================
 
     def on_connect_result(self, success, msg):
         if success:
             self.if_master_connected = True
-            self.ui.Btn_robot_connect.setText("断开连接")
-            self.ui.label.setText(f"状态: {msg}")
+            self.ui.Btn_robot_connect.setText("Disconnect")
+            self.ui.label.setText(f"status: {msg}")
         else:
             self.if_master_connected = False
-            self.ui.label.setText(f"状态: {msg}")
+            self.ui.label.setText(f"status: {msg}")
 
     def on_disconnect_result(self, success, msg):
         if success:
             self.if_master_connected = False
             self.if_slave_power_on = False
-            self.ui.Btn_robot_connect.setText("连接机械臂")
-            self.ui.label.setText(f"状态: {msg}")
+            self.ui.Btn_robot_connect.setText("Connect")
+            self.ui.label.setText(f"status: {msg}")
 
     def on_enable_result(self, success, msg):
         if success:
             self.if_slave_power_on = True
-            self.ui.pushButton_robot_PowerOn.setText("下使能")
-            self.ui.label.setText(f"状态: {msg}")
+            self.ui.pushButton_robot_PowerOn.setText("Disable")
+            self.ui.label.setText(f"status: {msg}")
 
     def on_disable_result(self, success, msg):
         if success:
             self.if_slave_power_on = False
-            self.ui.pushButton_robot_PowerOn.setText("上使能")
-            self.ui.label.setText(f"状态: {msg}")
+            self.ui.pushButton_robot_PowerOn.setText("Enable")
+            self.ui.label.setText(f"status: {msg}")
 
     # ================= 安全退出 =================
     def closeEvent(self, event):
-        print("正在关闭线程...")
+        print("Closing thread...")
         self.master_arm_thread.quit()
         self.master_arm_thread.wait()
-        print("线程已安全退出")
+        print("Thread has exited safely")
         event.accept()
 
 if __name__ == "__main__":

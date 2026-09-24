@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.11.1
+## Created by: Qt User Interface Compiler version 6.11.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -27,13 +27,13 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(u"centralwidget")
         self.Btn_robot_connect = QPushButton(self.centralwidget)
         self.Btn_robot_connect.setObjectName(u"Btn_robot_connect")
-        self.Btn_robot_connect.setGeometry(QRect(40, 40, 95, 25))
+        self.Btn_robot_connect.setGeometry(QRect(100, 40, 95, 25))
         self.label = QLabel(self.centralwidget)
         self.label.setObjectName(u"label")
-        self.label.setGeometry(QRect(160, 30, 131, 41))
+        self.label.setGeometry(QRect(10, 460, 781, 91))
         self.pushButton_robot_PowerOn = QPushButton(self.centralwidget)
         self.pushButton_robot_PowerOn.setObjectName(u"pushButton_robot_PowerOn")
-        self.pushButton_robot_PowerOn.setGeometry(QRect(40, 90, 95, 25))
+        self.pushButton_robot_PowerOn.setGeometry(QRect(220, 40, 95, 25))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")

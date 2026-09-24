@@ -15,40 +15,39 @@ class MasterRobotThread(QObject):
             self.if_connected = False
             self.if_power_on = False
 
-
         def Connect(self) -> bool:     
             if self.arm.Connect():
                 self.if_connected = True
-                self.sig_connect_result.emit(True, "连接成功")
+                self.sig_connect_result.emit(True, "connected successfully")
                 return True
             else:
-                self.sig_connect_result.emit(False, "连接失败")
+                self.sig_connect_result.emit(False, "failed to connect")
                 return False
 
         def Disconnect(self) -> bool:
             if self.arm.Disconnect():
                 self.if_connected = False
-                self.sig_disconnect_result.emit(True, "断开连接成功")
+                self.sig_disconnect_result.emit(True, "disconnected successfully")
                 return True
             else:
-                self.sig_disconnect_result.emit(False, "断开连接失败")  
+                self.sig_disconnect_result.emit(False, "failed to disconnect")
                 return False
 
         def Enable(self) -> bool:
             if self.arm.Enable():
                 self.if_power_on = True
-                self.sig_enable_result.emit(True, "使能成功")
+                self.sig_enable_result.emit(True, "enable successful")
                 return True
             else:
-                self.sig_enable_result.emit(False, "使能失败")
+                self.sig_enable_result.emit(False, "enable failed")
                 return False
 
         def Disable(self) -> bool:
             if self.arm.Disable():
                 self.if_power_on = False
-                self.sig_disable_result.emit(True, "禁用成功")
+                self.sig_disable_result.emit(True, "disable successful")
                 return True
             else:
-                self.sig_disable_result.emit(False, "禁用失败")
+                self.sig_disable_result.emit(False, "disable failed")
                 return False
 
