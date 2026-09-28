@@ -14,6 +14,8 @@ class MainWindow(QMainWindow):
     sig_request_disconnect = Signal()
     sig_request_enable = Signal()
     sig_request_disable = Signal()
+    sig_request_read_pos = Signal(int)
+    sig_request_stop_read_pos = Signal()
 
     def __init__(self):
         super().__init__()
@@ -32,6 +34,7 @@ class MainWindow(QMainWindow):
         #Bind button click command
         self.ui.Btn_robot_connect.clicked.connect(self.on_Btn_robot_connect_clicked)
         self.ui.pushButton_robot_PowerOn.clicked.connect(self.on_pushButton_robot_PowerOn_clicked)
+        self.ui.pushButton_read_pos.clicked.connect(self.on_pushButton_robot_ReadPos_clicked)
 
     def init_thread(self):
         #init master arm thread
@@ -53,6 +56,8 @@ class MainWindow(QMainWindow):
         self.sig_request_disconnect.connect(self.master_arm_worker.Disconnect)
         self.sig_request_enable.connect(self.master_arm_worker.Enable)
         self.sig_request_disable.connect(self.master_arm_worker.Disable)
+        self.sig_request_read_pos.connect(self.master_arm_worker.StartTimer)
+        self.sig_request_stop_read_pos.connect(self.master_arm_worker.StopTimer)
 
         # 5. 将 Worker 的结果信号 -> 连接到 MainWindow 的更新回调
         self.master_arm_worker.sig_connect_result.connect(self.on_connect_result)
@@ -81,6 +86,11 @@ class MainWindow(QMainWindow):
         else:
             self.ui.label.setText("Enabling...")
             self.sig_request_enable.emit()      
+
+    def on_pushButton_robot_ReadPos_clicked(self):
+
+        self.sig_request_read_pos.emit(100)  # Start reading positions every 100 ms
+
 
     # ================= 子线程执行完毕的回调（负责更新UI和状态） =================
 

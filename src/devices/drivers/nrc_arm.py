@@ -2,6 +2,11 @@ from src.devices.base.base_robotArm import BaseRobotArm
 from vendor.nrc import nrc_interface
 
 class NrcArm(BaseRobotArm):
+
+    MAX_POSITION_SIZE = 7
+    JOINT_COORD = 0
+    TCP_COORD = 1
+
     def __init__(self, name: str,ip_address: str, port: int):
 
         super().__init__(name, ip_address, port)
@@ -57,14 +62,41 @@ class NrcArm(BaseRobotArm):
         return not self.is_enabled
 
     def Get_joint_positions(self) -> list:
-        # 如果还没接真机，先返回假数据测试
-        out_put = nrc_interface.VectorDouble()
-        res = nrc_interface.get_current_position(self.socket_fd,0, out_put)
-        
-        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+        try:
+            out_put = nrc_interface.VectorDouble()
+            out_put.resize(self.MAX_POSITION_SIZE)
+            res = nrc_interface.get_current_position(self.socket_fd, self.JOINT_COORD, out_put)
+
+            if res != 0:
+                print(f"[{self.name}] get_current_position failed: {res}")
+                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+            values = list(out_put)
+            if len(values) < self.MAX_POSITION_SIZE:
+                values = values + [0.0] * (self.MAX_POSITION_SIZE - len(values))
+            return [float(v) for v in values[:self.MAX_POSITION_SIZE]]
+        except Exception as e:
+            print(f"[{self.name}] get_current_position error: {e}")
+            return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     def Get_tcp_positions(self) -> list:
-        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        try:
+            out_put = nrc_interface.VectorDouble()
+            out_put.resize(self.MAX_POSITION_SIZE)
+            res = nrc_interface.get_current_position(self.socket_fd, self.TCP_COORD, out_put)
+
+            if res != 0:
+                print(f"[{self.name}] get_current_position failed: {res}")
+                return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+            values = list(out_put)
+            if len(values) < self.MAX_POSITION_SIZE:
+                values = values + [0.0] * (self.MAX_POSITION_SIZE - len(values))
+            return [float(v) for v in values[:self.MAX_POSITION_SIZE]]
+        except Exception as e:
+            print(f"[{self.name}] get_current_position error: {e}")
+            return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
     def Move_j(self, joint_positions: list) -> bool:
         if not self.is_connected:

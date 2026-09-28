@@ -17,8 +17,8 @@
    <widget class="QPushButton" name="Btn_robot_connect">
     <property name="geometry">
      <rect>
-      <x>100</x>
-      <y>40</y>
+      <x>20</x>
+      <y>10</y>
       <width>95</width>
       <height>25</height>
      </rect>
@@ -43,14 +43,27 @@
    <widget class="QPushButton" name="pushButton_robot_PowerOn">
     <property name="geometry">
      <rect>
-      <x>220</x>
-      <y>40</y>
+      <x>130</x>
+      <y>10</y>
       <width>95</width>
       <height>25</height>
      </rect>
     </property>
     <property name="text">
      <string>PowerOn</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_read_pos">
+    <property name="geometry">
+     <rect>
+      <x>90</x>
+      <y>160</y>
+      <width>95</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>ReadPos</string>
     </property>
    </widget>
   </widget>
