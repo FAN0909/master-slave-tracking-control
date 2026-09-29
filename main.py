@@ -5,7 +5,7 @@ from PySide6.QtCore import QThread, Signal
 
 from src.ui.main_window import Ui_MainWindow
 from src.devices.drivers.nrc_arm import NrcArm
-from src.threads.master_robot_thread import MasterRobotThread
+from src.threads.slave_robot_thread import SlaveRobotThread
 
 class MainWindow(QMainWindow):
 
@@ -28,6 +28,7 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
 
         self.if_master_connected = False
+        self.if_slave_connected = False
         self.if_slave_power_on = False
 
         self.init_thread()
@@ -46,46 +47,46 @@ class MainWindow(QMainWindow):
 
 
     def init_thread(self):
-        #init master arm thread
-        self.init_master_arm_thread()       
+        #init slave arm thread
+        self.init_slave_arm_thread()       
 
-    #================= master arm thread =====================
-    def init_master_arm_thread(self):
+    #================= slave arm thread =====================
+    def init_slave_arm_thread(self):
         # 3. 实例化硬件
         self.nrc_arm = NrcArm(name="NrcArm", ip_address="192.168.2.14", command_port=6001, servo_port=7000)
 
         # ================= 核心：moveToThread 组装 =================
-        self.master_arm_thread = QThread()
-        self.master_arm_worker = MasterRobotThread(self.nrc_arm)
-        self.master_arm_worker.moveToThread(self.master_arm_thread)
+        self.slave_arm_thread = QThread()
+        self.slave_arm_worker = SlaveRobotThread(self.nrc_arm)
+        self.slave_arm_worker.moveToThread(self.slave_arm_thread)
         # ==========================================================
 
         # 4. 将 MainWindow 的请求信号 -> 连接到 Worker 的槽函数
-        self.sig_request_connect.connect(self.master_arm_worker.Connect)
-        self.sig_request_disconnect.connect(self.master_arm_worker.Disconnect)
-        self.sig_request_enable.connect(self.master_arm_worker.Enable)
-        self.sig_request_disable.connect(self.master_arm_worker.Disable)
-        self.sig_request_read_pos.connect(self.master_arm_worker.StartTimer)
-        self.sig_request_stop_read_pos.connect(self.master_arm_worker.StopTimer)
+        self.sig_request_connect.connect(self.slave_arm_worker.Connect)
+        self.sig_request_disconnect.connect(self.slave_arm_worker.Disconnect)
+        self.sig_request_enable.connect(self.slave_arm_worker.Enable)
+        self.sig_request_disable.connect(self.slave_arm_worker.Disable)
+        self.sig_request_read_pos.connect(self.slave_arm_worker.StartTimer)
+        self.sig_request_stop_read_pos.connect(self.slave_arm_worker.StopTimer)
 
         # 5. 将 Worker 的结果信号 -> 连接到 MainWindow 的更新回调
-        self.master_arm_worker.sig_connect_result.connect(self.on_connect_result)
-        self.master_arm_worker.sig_disconnect_result.connect(self.on_disconnect_result)
-        self.master_arm_worker.sig_enable_result.connect(self.on_enable_result)
-        self.master_arm_worker.sig_disable_result.connect(self.on_disable_result)
-        self.master_arm_worker.sig_joint_positions.connect(self.on_joint_positions_updated)
-        self.master_arm_worker.sig_tcp_positions.connect(self.on_tcp_positions_updated)
+        self.slave_arm_worker.sig_connect_result.connect(self.on_connect_result)
+        self.slave_arm_worker.sig_disconnect_result.connect(self.on_disconnect_result)
+        self.slave_arm_worker.sig_enable_result.connect(self.on_enable_result)
+        self.slave_arm_worker.sig_disable_result.connect(self.on_disable_result)
+        self.slave_arm_worker.sig_joint_positions.connect(self.on_joint_positions_updated)
+        self.slave_arm_worker.sig_tcp_positions.connect(self.on_tcp_positions_updated)
 
         #test
-        self.sig_request_open_servoj.connect(self.master_arm_worker.OpenServoJ)
-        self.sig_request_close_servoj.connect(self.master_arm_worker.CloseServoJ)
-        self.sig_request_move_servoj.connect(self.master_arm_worker.testservoj)
+        self.sig_request_open_servoj.connect(self.slave_arm_worker.OpenServoJ)
+        self.sig_request_close_servoj.connect(self.slave_arm_worker.CloseServoJ)
+        self.sig_request_move_servoj.connect(self.slave_arm_worker.testservoj)
 
-        self.master_arm_thread.start()
+        self.slave_arm_thread.start()
 
 
     def on_Btn_robot_connect_clicked(self):
-        if self.if_master_connected:
+        if self.if_slave_connected:
             self.ui.label.setText("Disconnecting...")
             self.sig_request_disconnect.emit() 
             self.sig_request_stop_read_pos.emit()  # Stop reading positions when connecting   
@@ -95,7 +96,7 @@ class MainWindow(QMainWindow):
             self.sig_request_connect.emit() 
 
     def on_pushButton_robot_PowerOn_clicked(self):
-        if not self.if_master_connected:
+        if not self.if_slave_connected:
             self.ui.label.setText("Please connect the robot first")
             return
 
@@ -153,17 +154,17 @@ class MainWindow(QMainWindow):
 
     def on_connect_result(self, success, msg):
         if success:
-            self.if_master_connected = True
+            self.if_slave_connected = True
             self.ui.Btn_robot_connect.setText("Disconnect")
             self.ui.label.setText(f"status: {msg}")
             self.on_pushButton_robot_ReadPos_clicked()
         else:
-            self.if_master_connected = False
+            self.if_slave_connected = False
             self.ui.label.setText(f"status: {msg}")
 
     def on_disconnect_result(self, success, msg):
         if success:
-            self.if_master_connected = False
+            self.if_slave_connected = False
             self.if_slave_power_on = False
             self.ui.Btn_robot_connect.setText("Connect")
             self.ui.label.setText(f"status: {msg}")
@@ -183,8 +184,8 @@ class MainWindow(QMainWindow):
     # ================= 安全退出 =================
     def closeEvent(self, event):
         print("Closing thread...")
-        self.master_arm_thread.quit()
-        self.master_arm_thread.wait()
+        self.slave_arm_thread.quit()
+        self.slave_arm_thread.wait()
         print("Thread has exited safely")
         event.accept()
 
