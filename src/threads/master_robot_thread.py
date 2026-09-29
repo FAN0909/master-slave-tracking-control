@@ -8,6 +8,8 @@ class MasterRobotThread(QObject):
         sig_disconnect_result = Signal(bool, str)
         sig_enable_result = Signal(bool, str)
         sig_disable_result = Signal(bool, str)
+        sig_joint_positions = Signal(list)
+        sig_tcp_positions = Signal(list)
 
         sig_start_timer = Signal(int)
         sig_stop_timer = Signal()
@@ -20,7 +22,6 @@ class MasterRobotThread(QObject):
             self.timer_read_pos = QTimer(self)
             self.timer_read_pos .timeout.connect(self.OnTimerTriggeredReadPos)
 
-    # ---------------- 定时器相关 ----------------
 
         @Slot(int)
         def StartTimer(self, interval_ms: int):
@@ -34,8 +35,10 @@ class MasterRobotThread(QObject):
                 self.timer_read_pos.stop()
 
         def OnTimerTriggeredReadPos(self):
-            pos =self.arm.Get_joint_positions()
-            print(f"[{self.arm.name}] current joint positions: {pos}")
+            joint_pos = self.arm.Get_joint_positions()
+            tcp_pos = self.arm.Get_tcp_positions()   
+            self.sig_joint_positions.emit(joint_pos)
+            self.sig_tcp_positions.emit(tcp_pos)
 
         @Slot()
         def Connect(self) -> bool:     
@@ -76,6 +79,33 @@ class MasterRobotThread(QObject):
             else:
                 self.sig_disable_result.emit(False, "disable failed")
                 return False
+
+        @Slot()
+        def OpenServoJ(self) -> bool:
+            if self.arm.Open_servoJ():
+                return True
+            else:
+                return False
+
+        @Slot()
+        def CloseServoJ(self) -> bool:
+            if self.arm.Close_servoJ():
+                return True
+            else:
+                return False
+            
+        def testservoj(self):
+            pos = self.arm.Get_joint_positions()
+            if not pos:
+                return
+
+            count = 0
+            while count < 10:
+                pos[0] -= 1.0
+                print(f"[{self.arm.name}] test servoJ angle: {pos[0]} deg")
+                self.arm.Set_servoJ_pos(pos)
+                count += 1
+
 
         
 

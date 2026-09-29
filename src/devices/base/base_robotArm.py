@@ -9,10 +9,8 @@ class BaseRobotArm(ABC):
     state reading, and motion execution.
     """
 
-    def __init__(self, name: str, ip_address: str, port: int):
+    def __init__(self, name: str):
         self.name = name
-        self.ip_address = ip_address
-        self.port = port
         self.is_connected = False
         self.is_enabled = False
 
@@ -47,11 +45,38 @@ class BaseRobotArm(ABC):
         pass
 
     @abstractmethod
-    def Move_j(self, joint_positions: list) -> bool:
-        """Move the robot arm to the specified joint positions."""
+    def Move_j(
+        self,
+        target_positions: list,
+        speed: float,
+        acceleration: float,
+        deceleration: float
+    ) -> bool:
+        """Move the robot arm in joint space."""
         pass
 
     @abstractmethod
-    def Move_l(self, tcp_positions: list) -> bool:
-        """Move the robot arm in a straight line to the specified TCP positions."""
+    def Move_l(
+        self,
+        target_positions: list,
+        speed: float,
+        acceleration: float,
+        deceleration: float
+    ) -> bool:
+        """Move the robot arm in Cartesian space."""
+        pass
+
+    @abstractmethod
+    def Open_servoJ(self) -> bool:
+        """Open the servo control."""
+        pass
+
+    @abstractmethod
+    def Close_servoJ(self) -> bool:
+        """Close the servo control."""
+        pass
+    
+    @abstractmethod
+    def Set_servoJ_pos(self,target_positions: list,) -> bool:
+        """Set the servo control to a specific position."""
         pass
