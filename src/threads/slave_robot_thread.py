@@ -93,6 +93,12 @@ class SlaveRobotThread(QObject):
                 return True
             else:
                 return False
+
+        @Slot(list, float, float, float)
+        def MoveJ(self, target_positions: list, speed: float, acceleration: float, deceleration: float) -> bool:
+            if self.arm is None:
+                return False
+            return self.arm.Move_j(target_positions, speed, acceleration, deceleration)
             
         def testservoj(self):
             pos = self.arm.Get_joint_positions()

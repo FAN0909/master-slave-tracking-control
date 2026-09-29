@@ -17,9 +17,11 @@ class MainWindow(QMainWindow):
     sig_request_read_pos = Signal(int)
     sig_request_stop_read_pos = Signal()
 
+    #test
     sig_request_open_servoj = Signal()
     sig_request_close_servoj = Signal()
     sig_request_move_servoj = Signal()
+    sig_request_movej = Signal(list, float, float, float)  # target_positions, speed, acceleration, deceleration
 
     def __init__(self):
         super().__init__()
@@ -81,6 +83,7 @@ class MainWindow(QMainWindow):
         self.sig_request_open_servoj.connect(self.slave_arm_worker.OpenServoJ)
         self.sig_request_close_servoj.connect(self.slave_arm_worker.CloseServoJ)
         self.sig_request_move_servoj.connect(self.slave_arm_worker.testservoj)
+        self.sig_request_movej.connect(self.slave_arm_worker.MoveJ)
 
         self.slave_arm_thread.start()
 
@@ -147,10 +150,12 @@ class MainWindow(QMainWindow):
         self.sig_request_close_servoj.emit()
 
     def on_start_servoj_move(self):
-        self.sig_request_move_servoj.emit()
+        #self.sig_request_move_servoj.emit()
+        self.sig_request_movej.emit([0.0, -2.20, 0.440, 2.20, -0.50, 0.793, 0.0], 5.0, 50.0, 50.0)
 
 
-    # ================= master arm thread 执行完毕的回调（负责更新UI和状态） =================
+
+    # ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 
     def on_connect_result(self, success, msg):
         if success:
