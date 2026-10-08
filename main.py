@@ -6,6 +6,7 @@ from PySide6.QtCore import QThread, Signal
 from src.ui.main_window import Ui_MainWindow
 from src.devices.drivers.nrc_arm import NrcArm
 from src.threads.slave_robot_thread import SlaveRobotThread
+from vendor.gello.dynamixel import DynamixelDriver
 
 class MainWindow(QMainWindow):
 
@@ -46,6 +47,7 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_openServoj.clicked.connect(self.on_servoj_opened)
         self.ui.pushButton_Start.clicked.connect(self.on_start_servoj_move)
         self.ui.pushButton_closeServoj.clicked.connect(self.on_servoj_closed)
+        self.ui.pushButton_test.clicked.connect(self.on_pushButton_test_clicked)
 
 
     def init_thread(self):
@@ -149,13 +151,34 @@ class MainWindow(QMainWindow):
     def on_servoj_closed(self):
         self.sig_request_close_servoj.emit()
 
+    #test servoJ
     def on_start_servoj_move(self):
         #self.sig_request_move_servoj.emit()
         self.sig_request_movej.emit([0.0, -2.20, 0.440, 2.20, -0.50, 0.793, 0.0], 5.0, 50.0, 50.0)
 
 
+    #test gello robot arm
+    def on_pushButton_test_clicked(self):
+        try:
+            driver = DynamixelDriver(
+                ids=[1,2,3,4,5,6],
+                port="/dev/ttyUSB0"
+            )
 
-    # ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
+            #driver.set_operating_mode(0)
+
+            #driver.set_torque_mode(True)
+
+            pos = driver.get_joints()
+
+            print(pos)
+
+            driver.close()
+        except Exception as exc:
+            print(f"[Dynamixel probe] ERROR: {type(exc).__name__}: {exc}")
+            self.ui.label.setText(f"Dynamixel probe failed: {type(exc).__name__}: {exc}")
+
+    # region ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 
     def on_connect_result(self, success, msg):
         if success:
@@ -186,13 +209,16 @@ class MainWindow(QMainWindow):
             self.ui.pushButton_robot_PowerOn.setText("Enable")
             self.ui.label.setText(f"status: {msg}")
 
-    # ================= 安全退出 =================
+    # endregion ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
+
+    # region ================= 安全退出 =================
     def closeEvent(self, event):
         print("Closing thread...")
         self.slave_arm_thread.quit()
         self.slave_arm_thread.wait()
         print("Thread has exited safely")
         event.accept()
+    # endregion ================= 安全退出 =================
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

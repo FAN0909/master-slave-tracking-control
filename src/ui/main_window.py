@@ -194,6 +194,9 @@ class Ui_MainWindow(object):
         self.pushButton_closeServoj = QPushButton(self.centralwidget)
         self.pushButton_closeServoj.setObjectName(u"pushButton_closeServoj")
         self.pushButton_closeServoj.setGeometry(QRect(690, 60, 95, 25))
+        self.pushButton_test = QPushButton(self.centralwidget)
+        self.pushButton_test.setObjectName(u"pushButton_test")
+        self.pushButton_test.setGeometry(QRect(660, 300, 95, 25))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -231,5 +234,6 @@ class Ui_MainWindow(object):
         self.pushButton_openServoj.setText(QCoreApplication.translate("MainWindow", u"OpenServoJ", None))
         self.pushButton_Start.setText(QCoreApplication.translate("MainWindow", u"Start", None))
         self.pushButton_closeServoj.setText(QCoreApplication.translate("MainWindow", u"Close", None))
+        self.pushButton_test.setText(QCoreApplication.translate("MainWindow", u"test", None))
     # retranslateUi
 
