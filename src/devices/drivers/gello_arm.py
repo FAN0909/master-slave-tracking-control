@@ -1,8 +1,8 @@
-from src.devices.base.base_robotArm import BaseRobotArm
+from src.devices.base.base_masterArm import BaseMasterArm
 from vendor.gello.dynamixel import DynamixelDriver
 from typing import Optional, Sequence
 
-class GelloArm(BaseRobotArm):
+class GelloArm(BaseMasterArm):
     def __init__(
         self,
         name: str,
@@ -24,7 +24,10 @@ class GelloArm(BaseRobotArm):
             self.dynamixel_driver = None
             self.is_connected = False
             self.is_enabled = False
-            self.MAX_POSITION_SIZE = len(self.ids) if self.ids is not None else 0
+
+    @property
+    def MAX_POSITION_SIZE(self) -> int:
+        return len(self.ids) if self.ids is not None else 0
 
     def Connect(self) -> bool:
         try:
@@ -76,5 +79,20 @@ class GelloArm(BaseRobotArm):
         except Exception as e:
             print(f"[{self.name}] get_current_position error: {e}")
             return [0.0] * self.MAX_POSITION_SIZE
-    
+
+
+    def Enable(self) -> bool:
+        raise NotImplementedError(
+            f"[{self.name}] Gello does not support Enable"
+        )
+
+    def Disable(self) -> bool:
+        raise NotImplementedError(
+            f"[{self.name}] Gello does not support Disable"
+        )
+
+    def Get_tcp_positions(self) -> list:
+        raise NotImplementedError(
+            f"[{self.name}] Gello does not provide TCP positions"
+        )
 

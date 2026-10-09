@@ -33,23 +33,24 @@ class MasterRobotThread(QObject):
         def Connect(self) -> bool:     
             if self.arm.Connect():
                 self.if_connected = True
-                self.sig_connect_result.emit(True, f"[{self.name}] connected successfully")
+                self.sig_connect_result.emit(True, "connected successfully")
                 return True
             else:
-                self.sig_connect_result.emit(False, f"[{self.name}] failed to connect")
+                self.sig_connect_result.emit(False, "failed to connect")
                 return False
             
         @Slot()
         def Disconnect(self) -> bool:
             if self.arm.Disconnect():
                 self.if_connected = False
-                self.sig_disconnect_result.emit(True, f"[{self.name}] disconnected successfully")
+                self.sig_disconnect_result.emit(True, "disconnected successfully")
                 return True
             else:
-                self.sig_disconnect_result.emit(False, f"[{self.name}] failed to disconnect")
+                self.sig_disconnect_result.emit(False, "failed to disconnect")
                 return False
 
 
         def OnTimerTriggeredReadPos(self):
             joint_pos = self.arm.Get_joint_positions()
             self.sig_joint_positions.emit(joint_pos)
+            #print(f"joint positions: {joint_pos}")

@@ -36,18 +36,78 @@
       <height>244</height>
      </rect>
     </property>
-    <layout class="QGridLayout" name="gridLayout" columnstretch="1,2,1,2">
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="lineEdit_master_read_pos_rate">
-       <property name="text">
-        <string>50</string>
-       </property>
-      </widget>
+    <layout class="QGridLayout" name="gridLayout" columnstretch="1,0,0,0">
+     <item row="2" column="3">
+      <widget class="QLineEdit" name="lineEdit_master_y"/>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="lineEdit_master_joint2"/>
      </item>
      <item row="6" column="0">
       <widget class="QLabel" name="label_7">
        <property name="text">
         <string>joint5(°)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="lineEdit_master_joint1"/>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label_6">
+       <property name="text">
+        <string>joint4(°)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>joint0(°)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="3">
+      <widget class="QLineEdit" name="lineEdit_master_a"/>
+     </item>
+     <item row="3" column="2">
+      <widget class="QLabel" name="label_12">
+       <property name="text">
+        <string>z(mm)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="3">
+      <widget class="QLineEdit" name="lineEdit_master_b"/>
+     </item>
+     <item row="6" column="2">
+      <widget class="QLabel" name="label_15">
+       <property name="text">
+        <string>c(rad)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="2">
+      <widget class="QLabel" name="label_11">
+       <property name="text">
+        <string>y(mm)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="3">
+      <widget class="QLineEdit" name="lineEdit_master_z"/>
+     </item>
+     <item row="1" column="2">
+      <widget class="QLabel" name="label_10">
+       <property name="text">
+        <string>x(mm)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="lineEdit_master_read_pos_rate">
+       <property name="text">
+        <string>50</string>
        </property>
       </widget>
      </item>
@@ -58,13 +118,10 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="QLineEdit" name="lineEdit_master_joint4"/>
-     </item>
-     <item row="7" column="0">
-      <widget class="QLabel" name="label_9">
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_5">
        <property name="text">
-        <string>joint6(°)</string>
+        <string>joint3(°)</string>
        </property>
       </widget>
      </item>
@@ -78,76 +135,14 @@
        </property>
       </widget>
      </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>joint0(°)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="label_6">
-       <property name="text">
-        <string>joint4(°)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QLineEdit" name="lineEdit_master_joint2"/>
-     </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_5">
-       <property name="text">
-        <string>joint3(°)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="2">
-      <widget class="QLabel" name="label_15">
-       <property name="text">
-        <string>c(rad)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QLineEdit" name="lineEdit_master_joint1"/>
-     </item>
-     <item row="1" column="2">
-      <widget class="QLabel" name="label_10">
-       <property name="text">
-        <string>x(mm)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="7" column="1">
-      <widget class="QLineEdit" name="lineEdit_master_joint6"/>
-     </item>
      <item row="6" column="1">
       <widget class="QLineEdit" name="lineEdit_master_joint5"/>
      </item>
-     <item row="2" column="2">
-      <widget class="QLabel" name="label_11">
-       <property name="text">
-        <string>y(mm)</string>
-       </property>
-      </widget>
+     <item row="6" column="3">
+      <widget class="QLineEdit" name="lineEdit_master_c"/>
      </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>joint1(°)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="2">
-      <widget class="QLabel" name="label_12">
-       <property name="text">
-        <string>z(mm)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QLineEdit" name="lineEdit_master_joint3"/>
+     <item row="5" column="1">
+      <widget class="QLineEdit" name="lineEdit_master_joint4"/>
      </item>
      <item row="4" column="2">
       <widget class="QLabel" name="label_13">
@@ -166,92 +161,76 @@
      <item row="1" column="3">
       <widget class="QLineEdit" name="lineEdit_master_x"/>
      </item>
-     <item row="2" column="3">
-      <widget class="QLineEdit" name="lineEdit_master_y"/>
+     <item row="4" column="1">
+      <widget class="QLineEdit" name="lineEdit_master_joint3"/>
      </item>
-     <item row="3" column="3">
-      <widget class="QLineEdit" name="lineEdit_master_z"/>
+     <item row="2" column="0">
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>joint1(°)</string>
+       </property>
+      </widget>
      </item>
-     <item row="4" column="3">
-      <widget class="QLineEdit" name="lineEdit_master_a"/>
+     <item row="7" column="0">
+      <widget class="QLabel" name="label_9">
+       <property name="text">
+        <string>joint6(°)</string>
+       </property>
+      </widget>
      </item>
-     <item row="5" column="3">
-      <widget class="QLineEdit" name="lineEdit_master_b"/>
-     </item>
-     <item row="6" column="3">
-      <widget class="QLineEdit" name="lineEdit_master_c"/>
+     <item row="7" column="1">
+      <widget class="QLineEdit" name="lineEdit_master_joint6"/>
      </item>
     </layout>
    </widget>
-   <widget class="QPushButton" name="pushButton_openServoj">
+   <widget class="QPushButton" name="pushButton_connect_master_arm">
     <property name="geometry">
      <rect>
-      <x>490</x>
-      <y>20</y>
-      <width>111</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>OpenServoJ</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_Start">
-    <property name="geometry">
-     <rect>
-      <x>490</x>
-      <y>50</y>
+      <x>30</x>
+      <y>120</y>
       <width>95</width>
       <height>25</height>
      </rect>
     </property>
     <property name="text">
-     <string>Start</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_closeServoj">
-    <property name="geometry">
-     <rect>
-      <x>490</x>
-      <y>90</y>
-      <width>95</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Close</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_test">
-    <property name="geometry">
-     <rect>
-      <x>760</x>
-      <y>70</y>
-      <width>95</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>test</string>
+     <string>Connect</string>
     </property>
    </widget>
    <widget class="QWidget" name="gridLayoutWidget_2">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>10</y>
+      <x>510</x>
+      <y>80</y>
       <width>421</width>
-      <height>81</height>
+      <height>89</height>
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_2">
      <item row="0" column="1">
-      <widget class="QLineEdit" name="lineEdit_slave_ar_ip"/>
+      <widget class="QLineEdit" name="lineEdit_slave_arm_ip">
+       <property name="text">
+        <string>192.168.2.14</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QPushButton" name="pushButton_robot_PowerOn">
+       <property name="text">
+        <string>PowerOn</string>
+       </property>
+      </widget>
      </item>
      <item row="0" column="2">
       <widget class="QPushButton" name="Btn_robot_connect">
        <property name="text">
         <string>Connect</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QPushButton" name="pushButton_openServoj">
+       <property name="text">
+        <string>OpenServoJ</string>
        </property>
       </widget>
      </item>
@@ -262,10 +241,17 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="3">
-      <widget class="QPushButton" name="pushButton_robot_PowerOn">
+     <item row="1" column="3">
+      <widget class="QPushButton" name="pushButton_Start">
        <property name="text">
-        <string>PowerOn</string>
+        <string>Start</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="3">
+      <widget class="QPushButton" name="pushButton_closeServoj">
+       <property name="text">
+        <string>Close</string>
        </property>
       </widget>
      </item>
@@ -414,6 +400,16 @@
         <string>z(mm)</string>
        </property>
       </widget>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="label_19">
+       <property name="text">
+        <string>joint6(°)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QLineEdit" name="lineEdit_slave_joint6"/>
      </item>
     </layout>
    </widget>

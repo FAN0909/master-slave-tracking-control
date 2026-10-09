@@ -12,7 +12,13 @@ class NrcArm(BaseRobotArm):
     SERVO_J_AVMAX = 200.0   # 加速度 °/s^2
     SERVO_J_JMAX  = 180.0   # 加加速度 °/s^3
 
-    def __init__(self, name: str,ip_address: str, command_port: int, servo_port: int):
+    def __init__(
+        self,
+        name: str,
+        ip_address: str = "192.168.2.14",
+        command_port: int = 6001,
+        servo_port: int = 7000,
+    ):
 
         super().__init__(name)
 

@@ -12,13 +12,19 @@ from vendor.gello.dynamixel import DynamixelDriver
 
 class MainWindow(QMainWindow):
 
-    #define signals to request actions in the worker thread
+    #define signals to request actions in the worker thread slave_arm_worker
     sig_request_connect = Signal()
     sig_request_disconnect = Signal()
     sig_request_enable = Signal()
     sig_request_disable = Signal()
     sig_request_read_pos = Signal(int)
     sig_request_stop_read_pos = Signal()
+
+    #define signals to request actions in the worker thread master_arm_worker
+    sig_request_master_connect = Signal()
+    sig_request_master_disconnect = Signal()
+    sig_request_master_read_pos = Signal(int)
+    sig_request_master_stop_read_pos = Signal()
 
     #test
     sig_request_open_servoj = Signal()
@@ -41,15 +47,18 @@ class MainWindow(QMainWindow):
 
 
     def init_ui_state(self):
-        #Bind button click command
+        #Bind button click command slave arm
         self.ui.Btn_robot_connect.clicked.connect(self.on_Btn_robot_connect_clicked)
         self.ui.pushButton_robot_PowerOn.clicked.connect(self.on_pushButton_robot_PowerOn_clicked)
+
+        #master arm click command
+        self.ui.pushButton_connect_master_arm.clicked.connect(self.on_pushButton_master_connect_clicked)
+
 
         #test
         self.ui.pushButton_openServoj.clicked.connect(self.on_servoj_opened)
         self.ui.pushButton_Start.clicked.connect(self.on_start_servoj_move)
         self.ui.pushButton_closeServoj.clicked.connect(self.on_servoj_closed)
-        self.ui.pushButton_test.clicked.connect(self.on_pushButton_test_clicked)
 
 
     def init_thread(self):
@@ -59,19 +68,82 @@ class MainWindow(QMainWindow):
         #init master arm thread
         self.init_master_arm_thread()
 
-    #================= master arm thread =====================
+ #region================= master arm thread =====================
     def init_master_arm_thread(self):
-        pass
+        self.master_arm = GelloArm(name="GelloArm", ids=[1, 2, 3, 4, 5, 6], port="/dev/ttyUSB0")
+
+        self.master_arm_thread = QThread()
+        self.master_arm_worker = MasterRobotThread(self.master_arm)
+        self.master_arm_worker.moveToThread(self.master_arm_thread)
+
+        self.sig_request_master_connect.connect(self.master_arm_worker.Connect)
+        self.sig_request_master_disconnect.connect(self.master_arm_worker.Disconnect)
+        self.sig_request_master_read_pos.connect(self.master_arm_worker.StartTimer)
+        self.sig_request_master_stop_read_pos.connect(self.master_arm_worker.StopTimer)
+
+        self.master_arm_worker.sig_connect_result.connect(self.on_master_arm_connect_result)
+        self.master_arm_worker.sig_disconnect_result.connect(self.on_master_arm_disconnect_result)
+        self.master_arm_worker.sig_joint_positions.connect(self.on_master_arm_joint_positions_updated)
+
+        self.master_arm_thread.start()
+
+    #region================= master arm thread 执行完毕的回调（负责更新UI和状态） =================
+    def on_master_arm_joint_positions_updated(self, positions):
+        if len(positions) < len(self.master_arm.ids):
+                return
+        for i in range(len(self.master_arm.ids)):
+            getattr(self.ui, f"lineEdit_master_joint{i}").setText(f"{positions[i]:.3f}")
+
+    def on_master_arm_connect_result(self, success, msg):
+        if success:
+            self.if_master_connected = True
+            self.ui.pushButton_connect_master_arm.setText("Disconnect")
+            self.ui.label.setText(f"status: {msg}")
+            self.on_master_robot_ReadPos()
+        else:
+            self.if_master_connected = False
+            self.ui.label.setText(f"status: {msg}")
+
+    def on_master_arm_disconnect_result(self, success, msg):
+        if success:
+            self.if_master_connected = False
+            self.ui.pushButton_connect_master_arm.setText("Connect")
+            self.ui.label.setText(f"status: {msg}")
+
+    #endregion================= master arm thread 执行完毕的回调（负责更新UI和状态） =================
+
+    #region================= master arm thread button click =====================
+    def on_pushButton_master_connect_clicked(self):
+        if self.if_master_connected:
+            self.ui.label.setText("Disconnecting...")
+            self.sig_request_master_disconnect.emit() 
+            self.sig_request_master_stop_read_pos.emit()  # Stop reading positions when connecting   
+        else:
+            self.ui.label.setText("Connecting...")
+            self.master_arm.ids = [1, 2, 3, 4, 5, 6, 7] # Update the IDs in the arm
+            self.sig_request_master_connect.emit()
+
+    def on_master_robot_ReadPos(self):
+        try:
+            interval_ms = int(self.ui.lineEdit_master_read_pos_rate.text())
+        except ValueError:
+            interval_ms = 100
+
+        if interval_ms <= 0:
+            interval_ms = 100
+
+        self.sig_request_master_read_pos.emit(interval_ms)
 
 
+    #endregion================= master arm thread button click =====================
 
 
+ #endregion================= master arm thread =====================
 
-
-    #================= slave arm thread =====================
+ #region================= slave arm thread =====================
     def init_slave_arm_thread(self):
         # 3. 实例化硬件
-        self.nrc_arm = NrcArm(name="NrcArm", ip_address="192.168.2.14", command_port=6001, servo_port=7000)
+        self.nrc_arm = NrcArm(name="NrcArm")
 
         # ================= 核心：moveToThread 组装 =================
         self.slave_arm_thread = QThread()
@@ -112,6 +184,11 @@ class MainWindow(QMainWindow):
 
         else:
             self.ui.label.setText("Connecting...")
+            IP_address = self.ui.lineEdit_slave_arm_ip.text().strip()
+            if not IP_address:
+                self.ui.label.setText("Please enter a valid IP address")
+                return
+            self.nrc_arm.ip_address = IP_address  # Update the IP address in the arm
             self.sig_request_connect.emit() 
 
     def on_pushButton_robot_PowerOn_clicked(self):
@@ -129,7 +206,7 @@ class MainWindow(QMainWindow):
 
     def on_pushButton_robot_ReadPos_clicked(self):
         try:
-            interval_ms = int(self.ui.lineEdit_read_pos_rate.text())
+            interval_ms = int(self.ui.lineEdit_slave_read_pos_rate.text())
         except ValueError:
             interval_ms = 100
 
@@ -170,28 +247,6 @@ class MainWindow(QMainWindow):
         #self.sig_request_move_servoj.emit()
         self.sig_request_movej.emit([0.0, -2.20, 0.440, 2.20, -0.50, 0.793, 0.0], 5.0, 50.0, 50.0)
 
-
-    #test gello robot arm
-    def on_pushButton_test_clicked(self):
-        try:
-            driver = DynamixelDriver(
-                ids=[1,2,3,4,5,6],
-                port="/dev/ttyUSB0"
-            )
-
-            #driver.set_operating_mode(0)
-
-            #driver.set_torque_mode(True)
-
-            pos = driver.get_joints()
-
-            print(pos)
-
-            driver.close()
-        except Exception as exc:
-            print(f"[Dynamixel probe] ERROR: {type(exc).__name__}: {exc}")
-            self.ui.label.setText(f"Dynamixel probe failed: {type(exc).__name__}: {exc}")
-
     # region ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 
     def on_connect_result(self, success, msg):
@@ -225,11 +280,22 @@ class MainWindow(QMainWindow):
 
     # endregion ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 
+
+#endregion================= slave arm thread =====================
+
+
     # region ================= 安全退出 =================
     def closeEvent(self, event):
-        print("Closing thread...")
+        # Stop the slave arm thread
+        print("Closing slave arm thread...")
         self.slave_arm_thread.quit()
         self.slave_arm_thread.wait()
+
+        # Stop the master arm thread
+        print("Closing master arm thread...")
+        self.master_arm_thread.quit()
+        self.master_arm_thread.wait()
+
         print("Thread has exited safely")
         event.accept()
     # endregion ================= 安全退出 =================
