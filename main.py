@@ -8,7 +8,7 @@ from src.devices.drivers.nrc_arm import NrcArm
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
 from src.devices.drivers.gello_arm import GelloArm
-from vendor.gello.dynamixel import DynamixelDriver
+from serial.tools import list_ports
 
 class MainWindow(QMainWindow):
 
@@ -53,6 +53,7 @@ class MainWindow(QMainWindow):
 
         #master arm click command
         self.ui.pushButton_connect_master_arm.clicked.connect(self.on_pushButton_master_connect_clicked)
+        self.ui.pushButton_refresh_master_port.clicked.connect(self.on_pushButton_refresh_master_port_clicked)
 
 
         #test
@@ -122,6 +123,12 @@ class MainWindow(QMainWindow):
             self.ui.label.setText("Connecting...")
             self.master_arm.ids = [1, 2, 3, 4, 5, 6, 7] # Update the IDs in the arm
             self.sig_request_master_connect.emit()
+
+    def on_pushButton_refresh_master_port_clicked(self):
+        self.ui.comboBox_master_port.clear()
+        for port in list_ports.comports():
+            if port.device.startswith(("/dev/ttyUSB", "/dev/ttyACM")):
+                self.ui.comboBox_master_port.addItem(port.device)
 
     def on_master_robot_ReadPos(self):
         try:
