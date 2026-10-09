@@ -6,6 +6,8 @@ from PySide6.QtCore import QThread, Signal
 from src.ui.main_window import Ui_MainWindow
 from src.devices.drivers.nrc_arm import NrcArm
 from src.threads.slave_robot_thread import SlaveRobotThread
+from src.threads.master_robot_thread import MasterRobotThread
+from src.devices.drivers.gello_arm import GelloArm
 from vendor.gello.dynamixel import DynamixelDriver
 
 class MainWindow(QMainWindow):
@@ -52,7 +54,19 @@ class MainWindow(QMainWindow):
 
     def init_thread(self):
         #init slave arm thread
-        self.init_slave_arm_thread()       
+        self.init_slave_arm_thread() 
+
+        #init master arm thread
+        self.init_master_arm_thread()
+
+    #================= master arm thread =====================
+    def init_master_arm_thread(self):
+        pass
+
+
+
+
+
 
     #================= slave arm thread =====================
     def init_slave_arm_thread(self):
@@ -127,23 +141,23 @@ class MainWindow(QMainWindow):
     def on_joint_positions_updated(self, positions):
         if len(positions) < 7:
                 return
-        self.ui.lineEdit_master_joint0.setText(f"{positions[0]:.3f}")
-        self.ui.lineEdit_master_joint1.setText(f"{positions[1]:.3f}")
-        self.ui.lineEdit_master_joint2.setText(f"{positions[2]:.3f}")
-        self.ui.lineEdit_master_joint3.setText(f"{positions[3]:.3f}")
-        self.ui.lineEdit_master_joint4.setText(f"{positions[4]:.3f}")
-        self.ui.lineEdit_master_joint5.setText(f"{positions[5]:.3f}")
-        self.ui.lineEdit_master_joint6.setText(f"{positions[6]:.3f}")
+        self.ui.lineEdit_slave_joint0.setText(f"{positions[0]:.3f}")
+        self.ui.lineEdit_slave_joint1.setText(f"{positions[1]:.3f}")
+        self.ui.lineEdit_slave_joint2.setText(f"{positions[2]:.3f}")
+        self.ui.lineEdit_slave_joint3.setText(f"{positions[3]:.3f}")
+        self.ui.lineEdit_slave_joint4.setText(f"{positions[4]:.3f}")
+        self.ui.lineEdit_slave_joint5.setText(f"{positions[5]:.3f}")
+        self.ui.lineEdit_slave_joint6.setText(f"{positions[6]:.3f}")
 
     def on_tcp_positions_updated(self, positions):
         if len(positions) < 6:
             return
-        self.ui.lineEdit_master_x.setText(f"{positions[0]:.3f}")
-        self.ui.lineEdit_master_y.setText(f"{positions[1]:.3f}")
-        self.ui.lineEdit_master_z.setText(f"{positions[2]:.3f}")
-        self.ui.lineEdit_master_a.setText(f"{positions[3]:.3f}")
-        self.ui.lineEdit_master_b.setText(f"{positions[4]:.3f}")
-        self.ui.lineEdit_master_c.setText(f"{positions[5]:.3f}")
+        self.ui.lineEdit_slave_x.setText(f"{positions[0]:.3f}")
+        self.ui.lineEdit_slave_y.setText(f"{positions[1]:.3f}")
+        self.ui.lineEdit_slave_z.setText(f"{positions[2]:.3f}")
+        self.ui.lineEdit_slave_a.setText(f"{positions[3]:.3f}")
+        self.ui.lineEdit_slave_b.setText(f"{positions[4]:.3f}")
+        self.ui.lineEdit_slave_c.setText(f"{positions[5]:.3f}")
 
     def on_servoj_opened(self):
         self.sig_request_open_servoj.emit()

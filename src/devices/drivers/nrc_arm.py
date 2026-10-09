@@ -14,7 +14,7 @@ class NrcArm(BaseRobotArm):
 
     def __init__(self, name: str,ip_address: str, command_port: int, servo_port: int):
 
-        super().__init__( name)
+        super().__init__(name)
 
         self.ip_address = ip_address
         self.command_port = command_port
