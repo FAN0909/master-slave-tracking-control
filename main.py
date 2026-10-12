@@ -63,7 +63,6 @@ class MainWindow(QMainWindow):
         #Bind button click command start/stop follow
         self.ui.pushButton_start_follow.clicked.connect(self.on_pushButton_start_follow_clicked)
 
-
         #test
         self.ui.pushButton_openServoj.clicked.connect(self.on_servoj_opened)
         self.ui.pushButton_Start.clicked.connect(self.on_start_servoj_move)
@@ -110,6 +109,9 @@ class MainWindow(QMainWindow):
             self.if_start_follow = False
         else:
             self.sig_request_open_servoj.emit()
+            if not self.if_servoj_open:
+                self.ui.label.setText(" OpenServoJ failed, please check the robot status")
+                return
             self.teleop_controller.StartTeleop()
             self.ui.pushButton_start_follow.setText("Stop Follow")
             self.if_start_follow = True

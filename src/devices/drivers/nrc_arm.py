@@ -8,9 +8,9 @@ class NrcArm(BaseRobotArm):
     TCP_COORD = 1
 
     # servoJ 运动约束
-    SERVO_J_VMAX  = 80.0    # 速度 °/s
+    SERVO_J_VMAX  = 100.0    # 速度 °/s
     SERVO_J_AVMAX = 200.0   # 加速度 °/s^2
-    SERVO_J_JMAX  = 180.0   # 加加速度 °/s^3
+    SERVO_J_JMAX  = 200.0   # 加加速度 °/s^3
 
     def __init__(
         self,

@@ -454,7 +454,7 @@ class Ui_MainWindow(object):
         self.label_15.setText(QCoreApplication.translate("MainWindow", u"c(rad)", None))
         self.label_11.setText(QCoreApplication.translate("MainWindow", u"y(mm)", None))
         self.label_10.setText(QCoreApplication.translate("MainWindow", u"x(mm)", None))
-        self.lineEdit_master_read_pos_rate.setText(QCoreApplication.translate("MainWindow", u"50", None))
+        self.lineEdit_master_read_pos_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
         self.label_14.setText(QCoreApplication.translate("MainWindow", u"b(rad)", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"joint3(\u00b0)", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"joint2(\u00b0)", None))
@@ -485,6 +485,6 @@ class Ui_MainWindow(object):
         self.label_21.setText(QCoreApplication.translate("MainWindow", u"joint0(\u00b0)", None))
         self.label_28.setText(QCoreApplication.translate("MainWindow", u"z(mm)", None))
         self.label_19.setText(QCoreApplication.translate("MainWindow", u"joint6(\u00b0)", None))
-        self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"50", None))
+        self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
     # retranslateUi
 
