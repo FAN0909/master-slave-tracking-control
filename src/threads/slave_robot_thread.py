@@ -28,7 +28,7 @@ class SlaveRobotThread(QObject):
         @Slot(int)
         def StartTimer(self, interval_ms: int=20):
             if interval_ms <= 0:
-                interval_ms = 100  
+                interval_ms = 20  
             self.timer_read_pos.start(interval_ms)
 
         @Slot()
@@ -130,6 +130,9 @@ class SlaveRobotThread(QObject):
                 print("ServoJ delta must contain 7 joint values")
                 return
 
+            if not self.if_servoj_open:
+                return
+        
             if self.servo_target_positions is None:
                 self.servo_target_positions = self.arm.Get_joint_positions()
 
@@ -141,8 +144,6 @@ class SlaveRobotThread(QObject):
                     delta_positions
                 )
             ]
-            if not self.if_servoj_open:
-                self.StopServoJTimer()
-                return
+ 
             target = list(self.servo_target_positions)
             self.arm.Set_servoJ_pos(target)

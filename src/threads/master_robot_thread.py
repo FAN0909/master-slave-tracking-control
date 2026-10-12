@@ -19,9 +19,9 @@ class MasterRobotThread(QObject):
             self.timer_read_pos .timeout.connect(self.OnTimerTriggeredReadPos)
 
         @Slot(int)
-        def StartTimer(self, interval_ms: int):
+        def StartTimer(self, interval_ms: int =20):
             if interval_ms <= 0:
-                interval_ms = 100  
+                interval_ms = 20  
             self.timer_read_pos.start(interval_ms)
 
         @Slot()
