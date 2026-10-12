@@ -5,17 +5,31 @@ from threading import Event, Lock, Thread
 from typing import Optional, Protocol, Sequence, Tuple
 
 import numpy as np
-from dynamixel_sdk.group_sync_read import GroupSyncRead
-from dynamixel_sdk.group_sync_write import GroupSyncWrite
-from dynamixel_sdk.packet_handler import PacketHandler
-from dynamixel_sdk.port_handler import PortHandler
-from dynamixel_sdk.robotis_def import (
-    COMM_SUCCESS,
-    DXL_HIBYTE,
-    DXL_HIWORD,
-    DXL_LOBYTE,
-    DXL_LOWORD,
-)
+
+try:
+    from dynamixel_sdk.group_sync_read import GroupSyncRead
+    from dynamixel_sdk.group_sync_write import GroupSyncWrite
+    from dynamixel_sdk.packet_handler import PacketHandler
+    from dynamixel_sdk.port_handler import PortHandler
+    from dynamixel_sdk.robotis_def import (
+        COMM_SUCCESS,
+        DXL_HIBYTE,
+        DXL_HIWORD,
+        DXL_LOBYTE,
+        DXL_LOWORD,
+    )
+except ModuleNotFoundError:
+    from vendor.gello.dynamixel.dynamixel_sdk.group_sync_read import GroupSyncRead
+    from vendor.gello.dynamixel.dynamixel_sdk.group_sync_write import GroupSyncWrite
+    from vendor.gello.dynamixel.dynamixel_sdk.packet_handler import PacketHandler
+    from vendor.gello.dynamixel.dynamixel_sdk.port_handler import PortHandler
+    from vendor.gello.dynamixel.dynamixel_sdk.robotis_def import (
+        COMM_SUCCESS,
+        DXL_HIBYTE,
+        DXL_HIWORD,
+        DXL_LOBYTE,
+        DXL_LOWORD,
+    )
 
 # Constants
 ADDR_TORQUE_ENABLE = 64
