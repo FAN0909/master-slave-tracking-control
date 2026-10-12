@@ -131,9 +131,8 @@ class SlaveRobotThread(QObject):
                 return
 
             if self.servo_target_positions is None:
-                if not self._ensure_servoj_target_initialized():
-                    print("ServoJ target is not initialized")
-                    return
+                self.servo_target_positions = self.arm.Get_joint_positions()
+
 
             self.servo_target_positions = [
                 target + delta

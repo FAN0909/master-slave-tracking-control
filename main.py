@@ -20,8 +20,6 @@ class MainWindow(QMainWindow):
     sig_request_disable = Signal()
     sig_request_read_pos = Signal(int)
     sig_request_stop_read_pos = Signal()
-    sig_request_start_servoj_timer = Signal(int)
-    sig_request_stop_servoj_timer = Signal()
 
     #define signals to request actions in the worker thread master_arm_worker
     sig_request_master_connect = Signal()
@@ -105,13 +103,13 @@ class MainWindow(QMainWindow):
 
     def on_pushButton_start_follow_clicked(self):
         if self.if_start_follow:
-            self.sig_request_stop_servoj_timer.emit()  # Stop the ServoJ timer
+
+            self.sig_request_close_servoj.emit()  # close ServoJ
             self.teleop_controller.StopTeleop()
             self.ui.pushButton_start_follow.setText("Start Follow")
             self.if_start_follow = False
         else:
-            time = self.ui.lineEdit_follow_rate.text()
-            self.sig_request_start_servoj_timer.emit(int(time))
+            self.sig_request_open_servoj.emit()
             self.teleop_controller.StartTeleop()
             self.ui.pushButton_start_follow.setText("Stop Follow")
             self.if_start_follow = True
@@ -223,8 +221,6 @@ class MainWindow(QMainWindow):
         self.sig_request_disable.connect(self.slave_arm_worker.Disable)
         self.sig_request_read_pos.connect(self.slave_arm_worker.StartTimer)
         self.sig_request_stop_read_pos.connect(self.slave_arm_worker.StopTimer)
-        self.sig_request_start_servoj_timer.connect(self.slave_arm_worker.StartServoJTimer)
-        self.sig_request_stop_servoj_timer.connect(self.slave_arm_worker.StopServoJTimer)
 
         # 5. 将 Worker 的结果信号 -> 连接到 MainWindow 的更新回调
         self.slave_arm_worker.sig_connect_result.connect(self.on_connect_result)
