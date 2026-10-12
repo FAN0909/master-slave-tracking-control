@@ -8,6 +8,7 @@ from src.devices.drivers.nrc_arm import NrcArm
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
 from src.devices.drivers.gello_arm import GelloArm
+from src.controller.teleop_controller import TeleopController
 from serial.tools import list_ports
 
 class MainWindow(QMainWindow):
@@ -19,6 +20,8 @@ class MainWindow(QMainWindow):
     sig_request_disable = Signal()
     sig_request_read_pos = Signal(int)
     sig_request_stop_read_pos = Signal()
+    sig_request_start_servoj_timer = Signal(int)
+    sig_request_stop_servoj_timer = Signal()
 
     #define signals to request actions in the worker thread master_arm_worker
     sig_request_master_connect = Signal()
@@ -42,8 +45,12 @@ class MainWindow(QMainWindow):
         self.if_slave_connected = False
         self.if_slave_power_on = False
 
+        self.if_start_follow = False
+
         self.init_thread()
         self.init_ui_state()
+
+        self.init_teleop_controller()
 
 
     def init_ui_state(self):
@@ -54,6 +61,9 @@ class MainWindow(QMainWindow):
         #master arm click command
         self.ui.pushButton_connect_master_arm.clicked.connect(self.on_pushButton_master_connect_clicked)
         self.ui.pushButton_refresh_master_port.clicked.connect(self.on_pushButton_refresh_master_port_clicked)
+
+        #Bind button click command start/stop follow
+        self.ui.pushButton_start_follow.clicked.connect(self.on_pushButton_start_follow_clicked)
 
 
         #test
@@ -68,6 +78,54 @@ class MainWindow(QMainWindow):
 
         #init master arm thread
         self.init_master_arm_thread()
+
+
+# ================= 遥操作控制器 =================
+    def init_teleop_controller(self):
+
+        # 【新增 1】创建遥操作控制器
+        self.teleop_controller = TeleopController(self)
+
+        # 【新增 2】主手读取到关节数据后，发送给遥操作控制器
+        # 原有的 on_master_arm_joint_positions_updated 连接保留，
+        # 因为它负责更新 UI 显示。
+        self.master_arm_worker.sig_joint_positions.connect(
+            self.teleop_controller.UpdateMasterJointPositions
+        )
+
+        # 【新增 3】控制器状态变化时，更新 UI 状态
+        self.teleop_controller.sig_teleop_state_changed.connect(
+            self.on_teleop_state_changed
+        )
+
+        # 新增：控制器的累计关节增量 -> 从手线程
+        self.teleop_controller.sig_set_slave_target.connect(
+            self.slave_arm_worker.AddServoJDelta
+        )
+
+    def on_pushButton_start_follow_clicked(self):
+        if self.if_start_follow:
+            self.sig_request_stop_servoj_timer.emit()  # Stop the ServoJ timer
+            self.teleop_controller.StopTeleop()
+            self.ui.pushButton_start_follow.setText("Start Follow")
+            self.if_start_follow = False
+        else:
+            time = self.ui.lineEdit_follow_rate.text()
+            self.sig_request_start_servoj_timer.emit(int(time))
+            self.teleop_controller.StartTeleop()
+            self.ui.pushButton_start_follow.setText("Stop Follow")
+            self.if_start_follow = True
+
+    # 【新增】遥操作状态回调
+    def on_teleop_state_changed(self, is_running):
+        if is_running:
+            self.ui.label.setText("Teleoperation: Running")
+        else:
+            self.ui.label.setText("Teleoperation: Stopped")
+
+
+# ================= 遥操作控制器 =================
+
 
  #region================= master arm thread =====================
     def init_master_arm_thread(self):
@@ -165,6 +223,8 @@ class MainWindow(QMainWindow):
         self.sig_request_disable.connect(self.slave_arm_worker.Disable)
         self.sig_request_read_pos.connect(self.slave_arm_worker.StartTimer)
         self.sig_request_stop_read_pos.connect(self.slave_arm_worker.StopTimer)
+        self.sig_request_start_servoj_timer.connect(self.slave_arm_worker.StartServoJTimer)
+        self.sig_request_stop_servoj_timer.connect(self.slave_arm_worker.StopServoJTimer)
 
         # 5. 将 Worker 的结果信号 -> 连接到 MainWindow 的更新回调
         self.slave_arm_worker.sig_connect_result.connect(self.on_connect_result)
@@ -251,8 +311,8 @@ class MainWindow(QMainWindow):
 
     #test servoJ
     def on_start_servoj_move(self):
-        #self.sig_request_move_servoj.emit()
-        self.sig_request_movej.emit([0.0, -2.20, 0.440, 2.20, -0.50, 0.793, 0.0], 5.0, 50.0, 50.0)
+        self.sig_request_move_servoj.emit()
+        #self.sig_request_movej.emit([0.0, -2.20, 0.440, 2.20, -0.50, 0.793, 0.0], 5.0, 50.0, 50.0)
 
     # region ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 

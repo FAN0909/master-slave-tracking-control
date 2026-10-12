@@ -33,13 +33,13 @@ class Ui_MainWindow(object):
         self.pushButton_start_follow = QPushButton(self.centralwidget)
         self.pushButton_start_follow.setObjectName(u"pushButton_start_follow")
         self.pushButton_start_follow.setGeometry(QRect(10, 390, 95, 25))
-        self.widget = QWidget(self.centralwidget)
-        self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(0, 10, 1051, 361))
-        self.horizontalLayout = QHBoxLayout(self.widget)
+        self.layoutWidget = QWidget(self.centralwidget)
+        self.layoutWidget.setObjectName(u"layoutWidget")
+        self.layoutWidget.setGeometry(QRect(0, 10, 1051, 361))
+        self.horizontalLayout = QHBoxLayout(self.layoutWidget)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
-        self.groupBox_2 = QGroupBox(self.widget)
+        self.groupBox_2 = QGroupBox(self.layoutWidget)
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.verticalLayout_4 = QVBoxLayout(self.groupBox_2)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
@@ -222,7 +222,7 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.addWidget(self.groupBox_2)
 
-        self.groupBox = QGroupBox(self.widget)
+        self.groupBox = QGroupBox(self.layoutWidget)
         self.groupBox.setObjectName(u"groupBox")
         self.verticalLayout_2 = QVBoxLayout(self.groupBox)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
@@ -422,6 +422,9 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.setStretch(0, 1)
         self.horizontalLayout.setStretch(1, 1)
+        self.lineEdit_follow_rate = QLineEdit(self.centralwidget)
+        self.lineEdit_follow_rate.setObjectName(u"lineEdit_follow_rate")
+        self.lineEdit_follow_rate.setGeometry(QRect(140, 400, 113, 25))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -482,5 +485,6 @@ class Ui_MainWindow(object):
         self.label_21.setText(QCoreApplication.translate("MainWindow", u"joint0(\u00b0)", None))
         self.label_28.setText(QCoreApplication.translate("MainWindow", u"z(mm)", None))
         self.label_19.setText(QCoreApplication.translate("MainWindow", u"joint6(\u00b0)", None))
+        self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"50", None))
     # retranslateUi
 

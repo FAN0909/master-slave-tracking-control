@@ -11,20 +11,22 @@ class SlaveRobotThread(QObject):
         sig_joint_positions = Signal(list)
         sig_tcp_positions = Signal(list)
 
-        sig_start_timer = Signal(int)
-        sig_stop_timer = Signal()
-
         def __init__(self, arm: BaseRobotArm):
             super().__init__()
             self.arm = arm
             self.if_connected = False
             self.if_power_on = False
+            self.if_servoj_open = False
+
+            # ServoJ 的目标关节位置
+            self.servo_target_positions = None
+
             self.timer_read_pos = QTimer(self)
             self.timer_read_pos .timeout.connect(self.OnTimerTriggeredReadPos)
 
 
         @Slot(int)
-        def StartTimer(self, interval_ms: int):
+        def StartTimer(self, interval_ms: int=20):
             if interval_ms <= 0:
                 interval_ms = 100  
             self.timer_read_pos.start(interval_ms)
@@ -52,6 +54,9 @@ class SlaveRobotThread(QObject):
             
         @Slot()
         def Disconnect(self) -> bool:
+
+            self.StopTimer()
+
             if self.arm.Disconnect():
                 self.if_connected = False
                 self.sig_disconnect_result.emit(True, "disconnected successfully")
@@ -83,6 +88,7 @@ class SlaveRobotThread(QObject):
         @Slot()
         def OpenServoJ(self) -> bool:
             if self.arm.Open_servoJ():
+                self.if_servoj_open = True
                 return True
             else:
                 return False
@@ -90,6 +96,7 @@ class SlaveRobotThread(QObject):
         @Slot()
         def CloseServoJ(self) -> bool:
             if self.arm.Close_servoJ():
+                self.if_servoj_open = False
                 return True
             else:
                 return False
@@ -115,5 +122,28 @@ class SlaveRobotThread(QObject):
                 count += 1
 
 
-        
+        @Slot(list)
+        def AddServoJDelta(self, delta_positions: list):
+            """将主手传来的关节增量累加到 ServoJ 目标。"""
 
+            if len(delta_positions) != 7:
+                print("ServoJ delta must contain 7 joint values")
+                return
+
+            if self.servo_target_positions is None:
+                if not self._ensure_servoj_target_initialized():
+                    print("ServoJ target is not initialized")
+                    return
+
+            self.servo_target_positions = [
+                target + delta
+                for target, delta in zip(
+                    self.servo_target_positions,
+                    delta_positions
+                )
+            ]
+            if not self.if_servoj_open:
+                self.StopServoJTimer()
+                return
+            target = list(self.servo_target_positions)
+            self.arm.Set_servoJ_pos(target)

@@ -1,5 +1,6 @@
 from PySide6.QtCore import QObject, Signal, Slot,QTimer
 from src.devices.base.base_robotArm import BaseRobotArm
+import math
 
 class MasterRobotThread(QObject):
 
@@ -51,6 +52,15 @@ class MasterRobotThread(QObject):
 
 
         def OnTimerTriggeredReadPos(self):
+            # 获取主手关节位置（弧度）
             joint_pos = self.arm.Get_joint_positions()
-            self.sig_joint_positions.emit(joint_pos)
-            #print(f"joint positions: {joint_pos}")
+
+            # 弧度转换为角度
+            joint_pos_deg = [
+                math.degrees(pos)
+                for pos in joint_pos
+            ]
+
+            # 发送角度数据
+            self.sig_joint_positions.emit(joint_pos_deg)
+

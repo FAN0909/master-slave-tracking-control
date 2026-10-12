@@ -40,7 +40,7 @@
      <string>Start follow</string>
     </property>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -454,6 +454,19 @@
       </widget>
      </item>
     </layout>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_follow_rate">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>400</y>
+      <width>113</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>50</string>
+    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">

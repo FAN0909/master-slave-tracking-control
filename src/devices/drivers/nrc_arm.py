@@ -33,6 +33,7 @@ class NrcArm(BaseRobotArm):
     #region command 6001 port control
     def Connect(self) -> bool:     
         try:
+            print(f"[{self.name}] connecting to {self.ip_address}:{self.command_port} and {self.servo_port}...")
             self.command_fd = nrc_interface.connect_robot(self.ip_address, str(self.command_port))
             self.servo_fd = nrc_interface.connect_robot(self.ip_address, str(self.servo_port))
             if self.command_fd == -1:
