@@ -1,5 +1,7 @@
 from PySide6.QtCore import QObject, Signal, Slot,QTimer
 from src.devices.base.base_robotArm import BaseRobotArm
+from src.shared_data.robot_share_data import RobotSharedMemory,MasterState
+
 import math
 
 class MasterRobotThread(QObject):
@@ -11,9 +13,10 @@ class MasterRobotThread(QObject):
         sig_start_timer = Signal(int)
         sig_stop_timer = Signal()
 
-        def __init__(self, arm: BaseRobotArm):
+        def __init__(self, arm: BaseRobotArm, shared_data: RobotSharedMemory):
             super().__init__()
             self.arm = arm
+            self.shared_data = shared_data
             self.if_connected = False
             self.timer_read_pos = QTimer(self)
             self.timer_read_pos .timeout.connect(self.OnTimerTriggeredReadPos)
@@ -60,6 +63,8 @@ class MasterRobotThread(QObject):
                 math.degrees(pos)
                 for pos in joint_pos
             ]
+            master_state = MasterState(joints=joint_pos_deg, tcp=[0.0]*6)
+            self.shared_data.master.write(master_state)
 
             # 发送角度数据
             self.sig_joint_positions.emit(joint_pos_deg)

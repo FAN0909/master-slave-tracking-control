@@ -1,3 +1,4 @@
+from src.ui.log_stream import Logger
 from src.devices.base.base_masterArm import BaseMasterArm
 from vendor.gello.dynamixel import DynamixelDriver
 from typing import Optional, Sequence
@@ -43,7 +44,7 @@ class GelloArm(BaseMasterArm):
             self.is_connected = True
             return True
         except Exception as e:
-            print(f"[{self.name}] connect failed: {e}")
+            Logger.instance().error(f"[{self.name}] connect failed: {e}")
             self.dynamixel_driver = None
             self.is_connected = False
             return False
@@ -55,10 +56,10 @@ class GelloArm(BaseMasterArm):
 
             self.dynamixel_driver = None
             self.is_connected = False
-            print(f"[{self.name}] disconnected")
+            Logger.instance().info(f"[{self.name}] disconnected")
             return True
         except Exception as e:
-            print(f"[{self.name}] disconnect failed: {e}")
+            Logger.instance().error(f"[{self.name}] disconnect failed: {e}")
             self.dynamixel_driver = None
             self.is_connected = False
             return False
@@ -77,7 +78,7 @@ class GelloArm(BaseMasterArm):
             return values
 
         except Exception as e:
-            print(f"[{self.name}] get_current_position error: {e}")
+            Logger.instance().error(f"[{self.name}] get_current_position error: {e}")
             return [0.0] * self.MAX_POSITION_SIZE
 
 

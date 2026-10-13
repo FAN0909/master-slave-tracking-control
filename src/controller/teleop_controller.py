@@ -1,119 +1,65 @@
-from PySide6.QtCore import QObject, Signal, Slot
-
-
-class TeleopController(QObject):
-    """Map master joint motion to slave joint increments."""
-
-    """把主手关节运动映射为从手关节增量。
-
-    核心思路：
-        维护一个"账本" _sent_offset，记录已经累计发给从手的偏移量。
-        每帧拿"主手相对起点的总偏移"减去"账本"，得到"还欠多少"，
-        经死区过滤后发给从手，并更新账本。
-        这样死区过滤掉的量不会丢失，下一帧会补上。
+from src.ui.log_stream import Logger
+class MasterSlaveTeleopCalculator:
     """
+    保留共享内存引用，内部自己读取master快照，
+    不需要外部传入主手关节坐标；算法完全沿用你原来TeleopController逻辑
+    """
+    def __init__(self, shared_data):
+        self.shared_data = shared_data
 
-
-    # The slave worker keeps its own target position and adds this increment.
-    sig_set_slave_target = Signal(list)
-    sig_teleop_state_changed = Signal(bool)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.is_running = False
-        self.master_joint_positions = None
-        self.master_start_positions = None
-
-        # Offset already sent to the slave since this follow session began.
-        self._sent_offset = None
-
-        # Joint mapping. Adjust signs for joints whose master/slave directions
-        # are opposite, and adjust scales when their joint ranges differ.
+        # 关节方向与缩放
         self.joint_sign = [
-            1.0,  # joint0：同方向
-            1.0,  # joint1：同方向
-            -1.0,  # joint2：反方向
-            1.0,  # joint3：同方向
-            1.0,  # joint4：同方向
-            1.0,  # joint5：同方向
-            1.0,  # joint6：同方向
+            1.0,   # joint0
+            1.0,   # joint1
+            -1.0,  # joint2 反向
+            1.0,   # joint3
+            1.0,   # joint4
+            1.0,   # joint5
+            1.0    # joint6
         ]
         self.joint_scale = [1.0] * 7
-
-        # All joint values are degrees. Set to 0.0 to send every small change.
         self.position_deadband_deg = 0.1
 
-    @Slot(list)
-    def UpdateMasterJointPositions(self, joint_positions: list):
-        """Convert the newest master pose into a slave increment."""
-        self.master_joint_positions = list(joint_positions)
-
-        if not self.is_running:
-            return
-
-        desired_offset = self._calculate_desired_offset(joint_positions)
-        if desired_offset is None:
-            return
-
-        increment = self._calculate_increment(desired_offset)
-        if not any(increment):
-            return
-
-        self.sig_set_slave_target.emit(increment)
-
-    @Slot()
-    def StartTeleop(self):
-        """Record the master reference pose and reset session state."""
-        if self.is_running:
-            return
-
-        if self.master_joint_positions is None:
-            print("Unable to start teleoperation: master joint data is unavailable")
-            return
-
-        joint_count = len(self.master_joint_positions)
-        if joint_count != len(self.joint_sign) or joint_count != len(self.joint_scale):
-            print("Unable to start teleoperation: master joint count must be 7")
-            return
-
-        self.master_start_positions = list(self.master_joint_positions)
-        self._sent_offset = [0.0] * joint_count
-        self.is_running = True
-        self.sig_teleop_state_changed.emit(True)
-
-    @Slot()
-    def StopTeleop(self):
-        """Clear all follow-session state to prevent a restart jump."""
-        if not self.is_running:
-            return
-
-        self.is_running = False
+        # 会话状态
         self.master_start_positions = None
         self._sent_offset = None
-        self.sig_teleop_state_changed.emit(False)
 
-    def _calculate_desired_offset(self, master_positions: list):
-        if self.master_start_positions is None:
-            return None
-        if len(master_positions) != len(self.master_start_positions):
-            print("Master joint count changed during teleoperation")
-            self.StopTeleop()
-            return None
+    def reset(self):
+        master_state = self.shared_data.master.read()
+        master_joints = master_state.joints
+        if master_joints is None or len(master_joints) != 7:
+            Logger.instance().error("[Teleop] master joint data invalid, reset failed")
+            self.master_start_positions = None
+            self._sent_offset = None
+            return False
+        self.master_start_positions = list(master_joints)
+        self._sent_offset = [0.0] * 7
+        return True
 
-        return [
-            sign * scale * (current - start)
-            for current, start, sign, scale in zip(
-                master_positions,
+
+    def compute_increment(self) -> list:
+        """
+        每帧调用，内部自动读共享内存主手，返回本帧增量delta列表
+        return: 7个关节增量
+        """
+        if self.master_start_positions is None or self._sent_offset is None:
+            return [0.0] * 7
+
+        master_state = self.shared_data.master.read()
+        master_joints = master_state.joints
+        if master_joints is None or len(master_joints) != 7:
+            return [0.0] * 7
+
+        # 期望总偏移
+        desired_offset = [
+            sign * scale * (curr - start)
+            for curr, start, sign, scale in zip(
+                master_joints,
                 self.master_start_positions,
                 self.joint_sign,
-                self.joint_scale,
+                self.joint_scale
             )
         ]
-
-    def _calculate_increment(self, desired_offset: list):
-        if self._sent_offset is None:
-            return None
 
         increment = []
         for desired, sent in zip(desired_offset, self._sent_offset):
@@ -122,8 +68,6 @@ class TeleopController(QObject):
                 delta = 0.0
             increment.append(delta)
 
-        self._sent_offset = [
-            sent + delta
-            for sent, delta in zip(self._sent_offset, increment)
-        ]
+        # 更新账本
+        self._sent_offset = [sent + delta for sent, delta in zip(self._sent_offset, increment)]
         return increment

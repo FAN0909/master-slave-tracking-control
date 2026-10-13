@@ -1,0 +1,10 @@
+{
+  "NRC": {
+    "MAX_POSITION_SIZE": 7,
+    "JOINT_COORD": 0,
+    "TCP_COORD": 1,
+    "SERVO_J_VMAX": 80.0,
+    "SERVO_J_AVMAX": 800.0,
+    "SERVO_J_JMAX": 1000.0
+  }
+}
