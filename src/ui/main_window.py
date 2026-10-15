@@ -11,28 +11,32 @@
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QGridLayout, QGroupBox,
-    QHBoxLayout, QLabel, QLineEdit, QMainWindow,
-    QMenuBar, QPushButton, QSizePolicy, QStatusBar,
-    QVBoxLayout, QWidget)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
+from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QGridLayout,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QMainWindow, QMenuBar, QPlainTextEdit, QPushButton,
+    QSizePolicy, QSpacerItem, QStatusBar, QVBoxLayout,
+    QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1054, 769)
+        MainWindow.resize(1054, 791)
+        self.menuSet_Param = QAction(MainWindow)
+        self.menuSet_Param.setObjectName(u"menuSet_Param")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.label = QLabel(self.centralwidget)
         self.label.setObjectName(u"label")
-        self.label.setGeometry(QRect(20, 530, 781, 91))
+        self.label.setGeometry(QRect(20, 435, 1011, 25))
         self.pushButton_start_follow = QPushButton(self.centralwidget)
         self.pushButton_start_follow.setObjectName(u"pushButton_start_follow")
-        self.pushButton_start_follow.setGeometry(QRect(10, 390, 95, 25))
+        self.pushButton_start_follow.setGeometry(QRect(30, 400, 95, 25))
         self.layoutWidget = QWidget(self.centralwidget)
         self.layoutWidget.setObjectName(u"layoutWidget")
         self.layoutWidget.setGeometry(QRect(0, 10, 1051, 361))
@@ -233,37 +237,34 @@ class Ui_MainWindow(object):
         self.label_16 = QLabel(self.groupBox)
         self.label_16.setObjectName(u"label_16")
 
-        self.gridLayout_2.addWidget(self.label_16, 0, 0, 1, 1)
-
-        self.pushButton_openServoj = QPushButton(self.groupBox)
-        self.pushButton_openServoj.setObjectName(u"pushButton_openServoj")
-
-        self.gridLayout_2.addWidget(self.pushButton_openServoj, 0, 4, 1, 1)
-
-        self.pushButton_robot_PowerOn = QPushButton(self.groupBox)
-        self.pushButton_robot_PowerOn.setObjectName(u"pushButton_robot_PowerOn")
-
-        self.gridLayout_2.addWidget(self.pushButton_robot_PowerOn, 0, 3, 1, 1)
-
-        self.Btn_robot_connect = QPushButton(self.groupBox)
-        self.Btn_robot_connect.setObjectName(u"Btn_robot_connect")
-
-        self.gridLayout_2.addWidget(self.Btn_robot_connect, 0, 2, 1, 1)
-
-        self.pushButton_Start = QPushButton(self.groupBox)
-        self.pushButton_Start.setObjectName(u"pushButton_Start")
-
-        self.gridLayout_2.addWidget(self.pushButton_Start, 0, 5, 1, 1)
+        self.gridLayout_2.addWidget(self.label_16, 1, 0, 1, 1)
 
         self.lineEdit_slave_arm_ip = QLineEdit(self.groupBox)
         self.lineEdit_slave_arm_ip.setObjectName(u"lineEdit_slave_arm_ip")
 
-        self.gridLayout_2.addWidget(self.lineEdit_slave_arm_ip, 0, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.lineEdit_slave_arm_ip, 1, 1, 1, 1)
 
-        self.pushButton_closeServoj = QPushButton(self.groupBox)
-        self.pushButton_closeServoj.setObjectName(u"pushButton_closeServoj")
+        self.pushButton_robot_PowerOn = QPushButton(self.groupBox)
+        self.pushButton_robot_PowerOn.setObjectName(u"pushButton_robot_PowerOn")
 
-        self.gridLayout_2.addWidget(self.pushButton_closeServoj, 0, 6, 1, 1)
+        self.gridLayout_2.addWidget(self.pushButton_robot_PowerOn, 1, 3, 1, 1)
+
+        self.Btn_robot_connect = QPushButton(self.groupBox)
+        self.Btn_robot_connect.setObjectName(u"Btn_robot_connect")
+
+        self.gridLayout_2.addWidget(self.Btn_robot_connect, 1, 2, 1, 1)
+
+        self.comboBox_robot_type = QComboBox(self.groupBox)
+        self.comboBox_robot_type.addItem("")
+        self.comboBox_robot_type.addItem("")
+        self.comboBox_robot_type.setObjectName(u"comboBox_robot_type")
+
+        self.gridLayout_2.addWidget(self.comboBox_robot_type, 0, 1, 1, 1)
+
+        self.label_32 = QLabel(self.groupBox)
+        self.label_32.setObjectName(u"label_32")
+
+        self.gridLayout_2.addWidget(self.label_32, 0, 0, 1, 1)
 
 
         self.verticalLayout.addLayout(self.gridLayout_2)
@@ -422,9 +423,110 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.setStretch(0, 1)
         self.horizontalLayout.setStretch(1, 1)
+        self.groupBox_log = QGroupBox(self.centralwidget)
+        self.groupBox_log.setObjectName(u"groupBox_log")
+        self.groupBox_log.setGeometry(QRect(0, 530, 1051, 231))
+        self.verticalLayout_log = QVBoxLayout(self.groupBox_log)
+        self.verticalLayout_log.setObjectName(u"verticalLayout_log")
+        self.horizontalLayout_log_toolbar = QHBoxLayout()
+        self.horizontalLayout_log_toolbar.setObjectName(u"horizontalLayout_log_toolbar")
+        self.spacer_log = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_log_toolbar.addItem(self.spacer_log)
+
+        self.checkBox_log_autoscroll = QCheckBox(self.groupBox_log)
+        self.checkBox_log_autoscroll.setObjectName(u"checkBox_log_autoscroll")
+        self.checkBox_log_autoscroll.setChecked(True)
+
+        self.horizontalLayout_log_toolbar.addWidget(self.checkBox_log_autoscroll)
+
+        self.pushButton_clear_log = QPushButton(self.groupBox_log)
+        self.pushButton_clear_log.setObjectName(u"pushButton_clear_log")
+
+        self.horizontalLayout_log_toolbar.addWidget(self.pushButton_clear_log)
+
+
+        self.verticalLayout_log.addLayout(self.horizontalLayout_log_toolbar)
+
+        self.plainTextEdit_log = QPlainTextEdit(self.groupBox_log)
+        self.plainTextEdit_log.setObjectName(u"plainTextEdit_log")
+        font = QFont()
+        font.setFamilies([u"Monospace"])
+        font.setPointSize(10)
+        self.plainTextEdit_log.setFont(font)
+        self.plainTextEdit_log.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        self.plainTextEdit_log.setReadOnly(True)
+        self.plainTextEdit_log.setMaximumBlockCount(2000)
+
+        self.verticalLayout_log.addWidget(self.plainTextEdit_log)
+
         self.lineEdit_follow_rate = QLineEdit(self.centralwidget)
         self.lineEdit_follow_rate.setObjectName(u"lineEdit_follow_rate")
         self.lineEdit_follow_rate.setGeometry(QRect(140, 400, 113, 25))
+        self.gridLayoutWidget = QWidget(self.centralwidget)
+        self.gridLayoutWidget.setObjectName(u"gridLayoutWidget")
+        self.gridLayoutWidget.setGeometry(QRect(341, 390, 701, 71))
+        self.gridLayout_5 = QGridLayout(self.gridLayoutWidget)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.comboBox_hand_type = QComboBox(self.gridLayoutWidget)
+        self.comboBox_hand_type.addItem("")
+        self.comboBox_hand_type.addItem("")
+        self.comboBox_hand_type.setObjectName(u"comboBox_hand_type")
+
+        self.gridLayout_5.addWidget(self.comboBox_hand_type, 1, 1, 1, 1)
+
+        self.comboBox_hand_comm_type = QComboBox(self.gridLayoutWidget)
+        self.comboBox_hand_comm_type.addItem("")
+        self.comboBox_hand_comm_type.addItem("")
+        self.comboBox_hand_comm_type.setObjectName(u"comboBox_hand_comm_type")
+
+        self.gridLayout_5.addWidget(self.comboBox_hand_comm_type, 0, 3, 1, 1)
+
+        self.pushButton_connect_hand = QPushButton(self.gridLayoutWidget)
+        self.pushButton_connect_hand.setObjectName(u"pushButton_connect_hand")
+
+        self.gridLayout_5.addWidget(self.pushButton_connect_hand, 1, 4, 1, 1)
+
+        self.pushButton_refresh_hand_connect_info = QPushButton(self.gridLayoutWidget)
+        self.pushButton_refresh_hand_connect_info.setObjectName(u"pushButton_refresh_hand_connect_info")
+
+        self.gridLayout_5.addWidget(self.pushButton_refresh_hand_connect_info, 0, 4, 1, 1)
+
+        self.comboBox_hand_model = QComboBox(self.gridLayoutWidget)
+        self.comboBox_hand_model.addItem("")
+        self.comboBox_hand_model.setObjectName(u"comboBox_hand_model")
+
+        self.gridLayout_5.addWidget(self.comboBox_hand_model, 0, 1, 1, 1)
+
+        self.label_34 = QLabel(self.gridLayoutWidget)
+        self.label_34.setObjectName(u"label_34")
+
+        self.gridLayout_5.addWidget(self.label_34, 1, 0, 1, 1)
+
+        self.label_33 = QLabel(self.gridLayoutWidget)
+        self.label_33.setObjectName(u"label_33")
+
+        self.gridLayout_5.addWidget(self.label_33, 0, 0, 1, 1)
+
+        self.comboBox_hand_comm_info = QComboBox(self.gridLayoutWidget)
+        self.comboBox_hand_comm_info.setObjectName(u"comboBox_hand_comm_info")
+
+        self.gridLayout_5.addWidget(self.comboBox_hand_comm_info, 1, 3, 1, 1)
+
+        self.label_35 = QLabel(self.gridLayoutWidget)
+        self.label_35.setObjectName(u"label_35")
+
+        self.gridLayout_5.addWidget(self.label_35, 0, 2, 1, 1)
+
+        self.label_36 = QLabel(self.gridLayoutWidget)
+        self.label_36.setObjectName(u"label_36")
+
+        self.gridLayout_5.addWidget(self.label_36, 1, 2, 1, 1)
+
+        self.pushButton_test_hand = QPushButton(self.centralwidget)
+        self.pushButton_test_hand.setObjectName(u"pushButton_test_hand")
+        self.pushButton_test_hand.setGeometry(QRect(600, 470, 95, 25))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -434,6 +536,8 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
+        self.menubar.addAction(self.menuSet_Param)
+
         self.retranslateUi(MainWindow)
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -441,7 +545,8 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"hello pysid6", None))
+        self.menuSet_Param.setText(QCoreApplication.translate("MainWindow", u"Set Param", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"\u5c31\u7eea", None))
         self.pushButton_start_follow.setText(QCoreApplication.translate("MainWindow", u"Start follow", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Master Arm", None))
         self.label_31.setText(QCoreApplication.translate("MainWindow", u"port", None))
@@ -454,7 +559,7 @@ class Ui_MainWindow(object):
         self.label_15.setText(QCoreApplication.translate("MainWindow", u"c(rad)", None))
         self.label_11.setText(QCoreApplication.translate("MainWindow", u"y(mm)", None))
         self.label_10.setText(QCoreApplication.translate("MainWindow", u"x(mm)", None))
-        self.lineEdit_master_read_pos_rate.setText(QCoreApplication.translate("MainWindow", u"50", None))
+        self.lineEdit_master_read_pos_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
         self.label_14.setText(QCoreApplication.translate("MainWindow", u"b(rad)", None))
         self.label_5.setText(QCoreApplication.translate("MainWindow", u"joint3(\u00b0)", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"joint2(\u00b0)", None))
@@ -464,13 +569,14 @@ class Ui_MainWindow(object):
         self.label_9.setText(QCoreApplication.translate("MainWindow", u"joint6(\u00b0)", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"Slave Arm", None))
         self.label_16.setText(QCoreApplication.translate("MainWindow", u"IP", None))
-        self.pushButton_openServoj.setText(QCoreApplication.translate("MainWindow", u"OpenServoJ", None))
+        self.lineEdit_slave_arm_ip.setText(QCoreApplication.translate("MainWindow", u"192.168.2.14", None))
         self.pushButton_robot_PowerOn.setText(QCoreApplication.translate("MainWindow", u"PowerOn", None))
         self.Btn_robot_connect.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
-        self.pushButton_Start.setText(QCoreApplication.translate("MainWindow", u"Start", None))
-        self.lineEdit_slave_arm_ip.setText(QCoreApplication.translate("MainWindow", u"192.168.2.14", None))
-        self.pushButton_closeServoj.setText(QCoreApplication.translate("MainWindow", u"Close", None))
-        self.lineEdit_slave_read_pos_rate.setText(QCoreApplication.translate("MainWindow", u"50", None))
+        self.comboBox_robot_type.setItemText(0, QCoreApplication.translate("MainWindow", u"NRC", None))
+        self.comboBox_robot_type.setItemText(1, QCoreApplication.translate("MainWindow", u"Dobot_Cr3", None))
+
+        self.label_32.setText(QCoreApplication.translate("MainWindow", u"Model", None))
+        self.lineEdit_slave_read_pos_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
         self.label_24.setText(QCoreApplication.translate("MainWindow", u"c(rad)", None))
         self.label_25.setText(QCoreApplication.translate("MainWindow", u"x(mm)", None))
         self.label_27.setText(QCoreApplication.translate("MainWindow", u"joint1(\u00b0)", None))
@@ -485,6 +591,26 @@ class Ui_MainWindow(object):
         self.label_21.setText(QCoreApplication.translate("MainWindow", u"joint0(\u00b0)", None))
         self.label_28.setText(QCoreApplication.translate("MainWindow", u"z(mm)", None))
         self.label_19.setText(QCoreApplication.translate("MainWindow", u"joint6(\u00b0)", None))
-        self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"50", None))
+        self.groupBox_log.setTitle(QCoreApplication.translate("MainWindow", u"\u8fd0\u884c\u65e5\u5fd7", None))
+        self.checkBox_log_autoscroll.setText(QCoreApplication.translate("MainWindow", u"\u81ea\u52a8\u6eda\u52a8", None))
+        self.pushButton_clear_log.setText(QCoreApplication.translate("MainWindow", u"\u6e05\u7a7a\u65e5\u5fd7", None))
+        self.plainTextEdit_log.setStyleSheet(QCoreApplication.translate("MainWindow", u"QPlainTextEdit { background: #18212b; color: #e0e6ed; border: 1px solid #354353; border-radius: 4px; padding: 6px; }", None))
+        self.plainTextEdit_log.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u8fd0\u884c\u65e5\u5fd7\u5c06\u663e\u793a\u5728\u8fd9\u91cc\u2026", None))
+        self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
+        self.comboBox_hand_type.setItemText(0, QCoreApplication.translate("MainWindow", u"Right Hand", None))
+        self.comboBox_hand_type.setItemText(1, QCoreApplication.translate("MainWindow", u"Left Hand", None))
+
+        self.comboBox_hand_comm_type.setItemText(0, QCoreApplication.translate("MainWindow", u"Modebus", None))
+        self.comboBox_hand_comm_type.setItemText(1, QCoreApplication.translate("MainWindow", u"Can", None))
+
+        self.pushButton_connect_hand.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.pushButton_refresh_hand_connect_info.setText(QCoreApplication.translate("MainWindow", u"Refresh", None))
+        self.comboBox_hand_model.setItemText(0, QCoreApplication.translate("MainWindow", u"LinkerO6", None))
+
+        self.label_34.setText(QCoreApplication.translate("MainWindow", u"Type", None))
+        self.label_33.setText(QCoreApplication.translate("MainWindow", u"Model", None))
+        self.label_35.setText(QCoreApplication.translate("MainWindow", u"Comm Type", None))
+        self.label_36.setText(QCoreApplication.translate("MainWindow", u"Comm Info", None))
+        self.pushButton_test_hand.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
     # retranslateUi
 

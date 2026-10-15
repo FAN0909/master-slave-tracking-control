@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1054</width>
-    <height>769</height>
+    <height>791</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,20 +18,20 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>530</y>
-      <width>781</width>
-      <height>91</height>
+      <y>435</y>
+      <width>1011</width>
+      <height>25</height>
      </rect>
     </property>
     <property name="text">
-     <string>hello pysid6</string>
+     <string>就绪</string>
     </property>
    </widget>
    <widget class="QPushButton" name="pushButton_start_follow">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>390</y>
+      <x>30</x>
+      <y>400</y>
       <width>95</width>
       <height>25</height>
      </rect>
@@ -158,7 +158,7 @@
             <item row="0" column="1">
              <widget class="QLineEdit" name="lineEdit_master_read_pos_rate">
               <property name="text">
-               <string>50</string>
+               <string>20</string>
               </property>
              </widget>
             </item>
@@ -249,52 +249,52 @@
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
            <layout class="QGridLayout" name="gridLayout_2">
-            <item row="0" column="0">
+            <item row="1" column="0">
              <widget class="QLabel" name="label_16">
               <property name="text">
                <string>IP</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="4">
-             <widget class="QPushButton" name="pushButton_openServoj">
-              <property name="text">
-               <string>OpenServoJ</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="3">
-             <widget class="QPushButton" name="pushButton_robot_PowerOn">
-              <property name="text">
-               <string>PowerOn</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="2">
-             <widget class="QPushButton" name="Btn_robot_connect">
-              <property name="text">
-               <string>Connect</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="5">
-             <widget class="QPushButton" name="pushButton_Start">
-              <property name="text">
-               <string>Start</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
+            <item row="1" column="1">
              <widget class="QLineEdit" name="lineEdit_slave_arm_ip">
               <property name="text">
                <string>192.168.2.14</string>
               </property>
              </widget>
             </item>
-            <item row="0" column="6">
-             <widget class="QPushButton" name="pushButton_closeServoj">
+            <item row="1" column="3">
+             <widget class="QPushButton" name="pushButton_robot_PowerOn">
               <property name="text">
-               <string>Close</string>
+               <string>PowerOn</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QPushButton" name="Btn_robot_connect">
+              <property name="text">
+               <string>Connect</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="comboBox_robot_type">
+              <item>
+               <property name="text">
+                <string>NRC</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Dobot_Cr3</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_32">
+              <property name="text">
+               <string>Model</string>
               </property>
              </widget>
             </item>
@@ -305,7 +305,7 @@
             <item row="0" column="1">
              <widget class="QLineEdit" name="lineEdit_slave_read_pos_rate">
               <property name="text">
-               <string>50</string>
+               <string>20</string>
               </property>
              </widget>
             </item>
@@ -455,6 +455,80 @@
      </item>
     </layout>
    </widget>
+   <widget class="QGroupBox" name="groupBox_log">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>530</y>
+      <width>1051</width>
+      <height>231</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>运行日志</string>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout_log">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_log_toolbar">
+       <item>
+        <spacer name="spacer_log">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="checkBox_log_autoscroll">
+         <property name="text">
+          <string>自动滚动</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_clear_log">
+         <property name="text">
+          <string>清空日志</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QPlainTextEdit" name="plainTextEdit_log">
+       <property name="font">
+        <font>
+         <family>Monospace</family>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string>QPlainTextEdit { background: #18212b; color: #e0e6ed; border: 1px solid #354353; border-radius: 4px; padding: 6px; }</string>
+       </property>
+       <property name="lineWrapMode">
+        <enum>QPlainTextEdit::LineWrapMode::NoWrap</enum>
+       </property>
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+       <property name="maximumBlockCount">
+        <number>2000</number>
+       </property>
+       <property name="placeholderText">
+        <string>运行日志将显示在这里…</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
    <widget class="QLineEdit" name="lineEdit_follow_rate">
     <property name="geometry">
      <rect>
@@ -465,7 +539,114 @@
      </rect>
     </property>
     <property name="text">
-     <string>50</string>
+     <string>20</string>
+    </property>
+   </widget>
+   <widget class="QWidget" name="gridLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>341</x>
+      <y>390</y>
+      <width>701</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_5">
+     <item row="1" column="1">
+      <widget class="QComboBox" name="comboBox_hand_type">
+       <item>
+        <property name="text">
+         <string>Right Hand</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Left Hand</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QComboBox" name="comboBox_hand_comm_type">
+       <item>
+        <property name="text">
+         <string>Modebus</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Can</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="4">
+      <widget class="QPushButton" name="pushButton_connect_hand">
+       <property name="text">
+        <string>Connect</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="4">
+      <widget class="QPushButton" name="pushButton_refresh_hand_connect_info">
+       <property name="text">
+        <string>Refresh</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="comboBox_hand_model">
+       <item>
+        <property name="text">
+         <string>LinkerO6</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_34">
+       <property name="text">
+        <string>Type</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_33">
+       <property name="text">
+        <string>Model</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3">
+      <widget class="QComboBox" name="comboBox_hand_comm_info"/>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="label_35">
+       <property name="text">
+        <string>Comm Type</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QLabel" name="label_36">
+       <property name="text">
+        <string>Comm Info</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QPushButton" name="pushButton_test_hand">
+    <property name="geometry">
+     <rect>
+      <x>600</x>
+      <y>470</y>
+      <width>95</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PushButton</string>
     </property>
    </widget>
   </widget>
@@ -478,8 +659,14 @@
      <height>27</height>
     </rect>
    </property>
+   <addaction name="menuSet_Param"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="menuSet_Param">
+   <property name="text">
+    <string>Set Param</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

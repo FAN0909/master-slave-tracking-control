@@ -1,31 +1,46 @@
 import sys
+from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLineEdit
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal, QTimer, QSignalBlocker
 
 from src.ui.main_window import Ui_MainWindow
-from src.devices.drivers.nrc_arm import NrcArm
+from src.ui.settings_dialog import SettingsDialog
+from src.ui.log_stream import Logger
+from src.devices.robot_factory import create_slave_arm
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
+from src.threads.hand_thread import HandThread
 from src.devices.drivers.gello_arm import GelloArm
-from src.controller.teleop_controller import TeleopController
 from serial.tools import list_ports
+from src.shared_data.robot_share_data import RobotSharedMemory
+from src.devices.drivers.Link_hand import LinkHand
 
 class MainWindow(QMainWindow):
 
     #define signals to request actions in the worker thread slave_arm_worker
-    sig_request_connect = Signal()
+    sig_request_connect = Signal(str)
+    sig_request_robot_type = Signal(str)
     sig_request_disconnect = Signal()
     sig_request_enable = Signal()
     sig_request_disable = Signal()
     sig_request_read_pos = Signal(int)
     sig_request_stop_read_pos = Signal()
+    sig_request_start_follow = Signal(int)
+    sig_request_stop_follow = Signal()
 
     #define signals to request actions in the worker thread master_arm_worker
     sig_request_master_connect = Signal()
     sig_request_master_disconnect = Signal()
     sig_request_master_read_pos = Signal(int)
     sig_request_master_stop_read_pos = Signal()
+
+    #define signals to request actions in the hand thread
+    sig_request_hand_connect = Signal()
+    sig_request_hand_disconnect = Signal()
+    sig_request_hand_set_joint_positions = Signal(list)
+    sig_request_hand_set_speed = Signal(list)
+
 
     #test
     sig_request_open_servoj = Signal()
@@ -38,20 +53,49 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.settings_dialog = SettingsDialog(self)
+        self.init_log_window()
 
         self.if_master_connected = False
         self.if_slave_connected = False
         self.if_slave_power_on = False
+        self.if_hand_connected = False
 
         self.if_start_follow = False
+
+        self.shared_robot_data = RobotSharedMemory()
 
         self.init_thread()
         self.init_ui_state()
 
-        self.init_teleop_controller()
+    def init_log_window(self):
+        self.logger = Logger.instance()
+        self.ui.pushButton_clear_log.clicked.connect(self.clear_log)
+        self._log_timer = QTimer(self)
+        self._log_timer.timeout.connect(self.flush_log)
+        self._log_timer.start(100)
+        Logger.instance().info("日志窗口已就绪")
+
+    def clear_log(self):
+        self.logger.clear()
+        self.ui.plainTextEdit_log.clear()
+
+    def flush_log(self):
+        lines = self.logger.take_messages()
+        if not lines:
+            return
+        editor = self.ui.plainTextEdit_log
+        scrollbar = editor.verticalScrollBar()
+        old_position = scrollbar.value()
+        editor.appendPlainText("\n".join(lines))
+        if self.ui.checkBox_log_autoscroll.isChecked():
+            scrollbar.setValue(scrollbar.maximum())
+        else:
+            scrollbar.setValue(old_position)
 
 
     def init_ui_state(self):
+        self.ui.menuSet_Param.triggered.connect(self.show_settings)
         #Bind button click command slave arm
         self.ui.Btn_robot_connect.clicked.connect(self.on_Btn_robot_connect_clicked)
         self.ui.pushButton_robot_PowerOn.clicked.connect(self.on_pushButton_robot_PowerOn_clicked)
@@ -62,13 +106,19 @@ class MainWindow(QMainWindow):
 
         #Bind button click command start/stop follow
         self.ui.pushButton_start_follow.clicked.connect(self.on_pushButton_start_follow_clicked)
+        self.ui.comboBox_robot_type.currentTextChanged.connect(self.on_robot_type_changed)
 
+        #Bind button click command hand
+        self.ui.pushButton_refresh_hand_connect_info.clicked.connect(self.on_pushButton_refresh_hand_connect_info_clicked)
+        self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
 
         #test
-        self.ui.pushButton_openServoj.clicked.connect(self.on_servoj_opened)
-        self.ui.pushButton_Start.clicked.connect(self.on_start_servoj_move)
-        self.ui.pushButton_closeServoj.clicked.connect(self.on_servoj_closed)
+        self.ui.pushButton_test_hand.clicked.connect(self.on_pushButton_test_hand_clicked)
 
+    def show_settings(self):
+        self.settings_dialog.show()
+        self.settings_dialog.raise_()
+        self.settings_dialog.activateWindow()
 
     def init_thread(self):
         #init slave arm thread
@@ -77,44 +127,124 @@ class MainWindow(QMainWindow):
         #init master arm thread
         self.init_master_arm_thread()
 
+        #init hand thread
+        self.init_hand_thread()
+
+
+#===================hand thread=========================
+    def init_hand_thread(self):
+        self.hand_thread = QThread()
+        self.hand = LinkHand(name="LinkHand", hand_type="left", hand_joint="O6", modbus = "None",can="can0")
+        self.hand_worker = HandThread(self.hand, self.shared_robot_data)
+        self.hand_worker.moveToThread(self.hand_thread)
+
+        # Connect signals to the worker's slots
+        self.sig_request_hand_connect.connect(self.hand_worker.Connect)
+        self.sig_request_hand_disconnect.connect(self.hand_worker.Disconnect)
+        self.sig_request_hand_set_joint_positions.connect(self.hand_worker.Set_joint_positions)
+        self.sig_request_hand_set_speed.connect(self.hand_worker.Set_speed)
+
+        # Connect the worker's signals to the main window's slots
+        self.hand_worker.sig_connect_result.connect(self.on_hand_connect_result)
+        self.hand_worker.sig_disconnect_result.connect(self.on_hand_disconnect_result)
+
+        self.hand_thread.start()
+
+    def on_hand_connect_result(self, success, msg):
+        if success:
+            Logger.instance().info(f"[LinkHand] connected successfully")
+            self.ui.pushButton_connect_hand.setText("Disconnect")
+            self.if_hand_connected = True   
+        else:
+            Logger.instance().error(f"[LinkHand] failed to connect: {msg}")
+
+    def on_hand_disconnect_result(self, success, msg):
+        if success:
+            Logger.instance().info(f"[LinkHand] disconnected successfully")
+            self.ui.pushButton_connect_hand.setText("Connect")
+            self.if_hand_connected = False
+        else:
+            Logger.instance().error(f"[LinkHand] failed to disconnect: {msg}")
+
+    def on_pushButton_refresh_hand_connect_info_clicked(self):
+        combo = self.ui.comboBox_hand_comm_info
+        previous_port = combo.currentText()
+        combo.clear()
+        comm_type = self.ui.comboBox_hand_comm_type.currentText().strip().lower()
+
+        try:
+            if comm_type in ("modebus", "modbus"):
+                ports = [
+                    port.device for port in list_ports.comports()
+                    if port.vid is not None
+                    or port.device.startswith(("/dev/ttyUSB", "/dev/ttyACM"))
+                ]
+            elif comm_type == "can":
+                ports = []
+                # Linux ARPHRD_CAN = 280; also detects renamed CAN interfaces.
+                for interface in Path("/sys/class/net").glob("*"):
+                    try:
+                        if (interface / "type").read_text().strip() == "280":
+                            ports.append(interface.name)
+                    except OSError:
+                        # An interface may disappear while refreshing.
+                        continue
+            else:
+                return
+
+            combo.addItems(sorted(set(ports)))
+            index = combo.findText(previous_port)
+            if index >= 0:
+                combo.setCurrentIndex(index)
+        except Exception as e:
+            Logger.instance().error(f"[LinkHand] 刷新通信端口失败: {e}")
+
+    def on_pushButton_hand_connect_clicked(self):
+        if self.if_hand_connected:
+            self.sig_request_hand_disconnect.emit()
+        else:
+            hand_model = self.ui.comboBox_hand_model.currentText().strip()
+            hand_type_ = self.ui.comboBox_hand_type.currentText().strip()
+            hand_comm_type = self.ui.comboBox_hand_comm_type.currentText().strip()
+            hand_comm_info = self.ui.comboBox_hand_comm_info.currentText().strip()
+
+            if hand_model == "LinkerO6":
+                self.hand.hand_joint = "O6"
+
+            if hand_type_ == "Right Hand":
+                self.hand.hand_type = "right"
+            if hand_type_ == "Left Hand":
+                self.hand.hand_type = "left"
+
+            if hand_comm_type.lower() in ("modbus", "modebus"):
+                self.hand.modbus = hand_comm_info
+                self.hand.can = "can0"  # Default CAN interface when using Modbus
+            elif hand_comm_type.lower() == "can":
+                self.hand.can = hand_comm_info
+                self.hand.modbus = "None"  # Default Modbus when using CAN
+
+            self.sig_request_hand_connect.emit()
+
+    def on_pushButton_test_hand_clicked(self):
+        self.sig_request_hand_set_joint_positions.emit([100, 255, 255, 255, 255, 255])
+
+#===================hand thread=========================
+
 
 # ================= 遥操作控制器 =================
-    def init_teleop_controller(self):
-
-        # 【新增 1】创建遥操作控制器
-        self.teleop_controller = TeleopController(self)
-
-        # 【新增 2】主手读取到关节数据后，发送给遥操作控制器
-        # 原有的 on_master_arm_joint_positions_updated 连接保留，
-        # 因为它负责更新 UI 显示。
-        self.master_arm_worker.sig_joint_positions.connect(
-            self.teleop_controller.UpdateMasterJointPositions
-        )
-
-        # 【新增 3】控制器状态变化时，更新 UI 状态
-        self.teleop_controller.sig_teleop_state_changed.connect(
-            self.on_teleop_state_changed
-        )
-
-        # 新增：控制器的累计关节增量 -> 从手线程
-        self.teleop_controller.sig_set_slave_target.connect(
-            self.slave_arm_worker.AddServoJDelta
-        )
 
     def on_pushButton_start_follow_clicked(self):
         if self.if_start_follow:
-
-            self.sig_request_close_servoj.emit()  # close ServoJ
-            self.teleop_controller.StopTeleop()
+            self.sig_request_stop_follow.emit()
             self.ui.pushButton_start_follow.setText("Start Follow")
             self.if_start_follow = False
         else:
-            self.sig_request_open_servoj.emit()
-            self.teleop_controller.StartTeleop()
+            time_interval_ms = int(self.ui.lineEdit_follow_rate.text())
+            self.sig_request_start_follow.emit(time_interval_ms)
             self.ui.pushButton_start_follow.setText("Stop Follow")
             self.if_start_follow = True
 
-    # 【新增】遥操作状态回调
+    # 遥操作状态回调
     def on_teleop_state_changed(self, is_running):
         if is_running:
             self.ui.label.setText("Teleoperation: Running")
@@ -130,7 +260,7 @@ class MainWindow(QMainWindow):
         self.master_arm = GelloArm(name="GelloArm", ids=[1, 2, 3, 4, 5, 6], port="/dev/ttyUSB0")
 
         self.master_arm_thread = QThread()
-        self.master_arm_worker = MasterRobotThread(self.master_arm)
+        self.master_arm_worker = MasterRobotThread(self.master_arm, self.shared_robot_data)
         self.master_arm_worker.moveToThread(self.master_arm_thread)
 
         self.sig_request_master_connect.connect(self.master_arm_worker.Connect)
@@ -206,21 +336,25 @@ class MainWindow(QMainWindow):
  #region================= slave arm thread =====================
     def init_slave_arm_thread(self):
         # 3. 实例化硬件
-        self.nrc_arm = NrcArm(name="NrcArm")
+        robot_type = self.ui.comboBox_robot_type.currentText()
+        arm = create_slave_arm(robot_type)
 
         # ================= 核心：moveToThread 组装 =================
         self.slave_arm_thread = QThread()
-        self.slave_arm_worker = SlaveRobotThread(self.nrc_arm)
+        self.slave_arm_worker = SlaveRobotThread(arm, self.shared_robot_data, robot_type)
         self.slave_arm_worker.moveToThread(self.slave_arm_thread)
         # ==========================================================
 
         # 4. 将 MainWindow 的请求信号 -> 连接到 Worker 的槽函数
         self.sig_request_connect.connect(self.slave_arm_worker.Connect)
+        self.sig_request_robot_type.connect(self.slave_arm_worker.ChangeRobotType)
         self.sig_request_disconnect.connect(self.slave_arm_worker.Disconnect)
         self.sig_request_enable.connect(self.slave_arm_worker.Enable)
         self.sig_request_disable.connect(self.slave_arm_worker.Disable)
         self.sig_request_read_pos.connect(self.slave_arm_worker.StartTimer)
         self.sig_request_stop_read_pos.connect(self.slave_arm_worker.StopTimer)
+        self.sig_request_start_follow.connect(self.slave_arm_worker.StartFollow)
+        self.sig_request_stop_follow.connect(self.slave_arm_worker.StopFollow)
 
         # 5. 将 Worker 的结果信号 -> 连接到 MainWindow 的更新回调
         self.slave_arm_worker.sig_connect_result.connect(self.on_connect_result)
@@ -229,6 +363,7 @@ class MainWindow(QMainWindow):
         self.slave_arm_worker.sig_disable_result.connect(self.on_disable_result)
         self.slave_arm_worker.sig_joint_positions.connect(self.on_joint_positions_updated)
         self.slave_arm_worker.sig_tcp_positions.connect(self.on_tcp_positions_updated)
+        self.slave_arm_worker.sig_robot_type_result.connect(self.on_robot_type_result)
 
         #test
         self.sig_request_open_servoj.connect(self.slave_arm_worker.OpenServoJ)
@@ -238,6 +373,25 @@ class MainWindow(QMainWindow):
 
         self.slave_arm_thread.start()
 
+    def on_robot_type_changed(self, robot_type):
+        self.ui.comboBox_robot_type.setEnabled(False)
+        self.ui.Btn_robot_connect.setEnabled(False)
+        self.sig_request_robot_type.emit(robot_type)
+
+    def on_robot_type_result(self, success, robot_type, message):
+        # 失败时恢复实际型号，避免再次触发切换信号。
+        with QSignalBlocker(self.ui.comboBox_robot_type):
+            self.ui.comboBox_robot_type.setCurrentText(robot_type)
+        self.ui.comboBox_robot_type.setEnabled(True)
+        self.ui.Btn_robot_connect.setEnabled(True)
+        self.ui.label.setText(message)
+        if success:
+            self.if_slave_power_on = False
+            self.if_start_follow = False
+            self.ui.pushButton_robot_PowerOn.setText("PowerOn")
+            self.ui.pushButton_start_follow.setText("Start Follow")
+            for suffix in [f"joint{i}" for i in range(7)] + ["x", "y", "z", "a", "b", "c"]:
+                getattr(self.ui, f"lineEdit_slave_{suffix}").clear()
 
     def on_Btn_robot_connect_clicked(self):
         if self.if_slave_connected:
@@ -251,8 +405,7 @@ class MainWindow(QMainWindow):
             if not IP_address:
                 self.ui.label.setText("Please enter a valid IP address")
                 return
-            self.nrc_arm.ip_address = IP_address  # Update the IP address in the arm
-            self.sig_request_connect.emit() 
+            self.sig_request_connect.emit(IP_address)
 
     def on_pushButton_robot_PowerOn_clicked(self):
         if not self.if_slave_connected:
@@ -299,17 +452,6 @@ class MainWindow(QMainWindow):
         self.ui.lineEdit_slave_b.setText(f"{positions[4]:.3f}")
         self.ui.lineEdit_slave_c.setText(f"{positions[5]:.3f}")
 
-    def on_servoj_opened(self):
-        self.sig_request_open_servoj.emit()
-
-    def on_servoj_closed(self):
-        self.sig_request_close_servoj.emit()
-
-    #test servoJ
-    def on_start_servoj_move(self):
-        self.sig_request_move_servoj.emit()
-        #self.sig_request_movej.emit([0.0, -2.20, 0.440, 2.20, -0.50, 0.793, 0.0], 5.0, 50.0, 50.0)
-
     # region ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 
     def on_connect_result(self, success, msg):
@@ -323,10 +465,15 @@ class MainWindow(QMainWindow):
             self.ui.label.setText(f"status: {msg}")
 
     def on_disconnect_result(self, success, msg):
+        self.if_start_follow = False
+        self.ui.pushButton_start_follow.setText("Start Follow")
         if success:
             self.if_slave_connected = False
             self.if_slave_power_on = False
             self.ui.Btn_robot_connect.setText("Connect")
+            self.ui.pushButton_robot_PowerOn.setText("PowerOn")
+            self.ui.label.setText(f"status: {msg}")
+        else:
             self.ui.label.setText(f"status: {msg}")
 
     def on_enable_result(self, success, msg):
@@ -349,17 +496,24 @@ class MainWindow(QMainWindow):
 
     # region ================= 安全退出 =================
     def closeEvent(self, event):
+        # Stop the hand worker before its QThread is destroyed.
+        Logger.instance().info("Closing hand thread...")
+        self.hand_thread.quit()
+        self.hand_thread.wait()
+
         # Stop the slave arm thread
-        print("Closing slave arm thread...")
+        Logger.instance().info("Closing slave arm thread...")
         self.slave_arm_thread.quit()
         self.slave_arm_thread.wait()
 
         # Stop the master arm thread
-        print("Closing master arm thread...")
+        Logger.instance().info("Closing master arm thread...")
         self.master_arm_thread.quit()
         self.master_arm_thread.wait()
 
-        print("Thread has exited safely")
+        Logger.instance().info("Thread has exited safely")
+        self.flush_log()
+        self._log_timer.stop()
         event.accept()
     # endregion ================= 安全退出 =================
 

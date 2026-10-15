@@ -21,7 +21,7 @@ logging.basicConfig(
 )
 
 # ------------------------------------------------------------------
-# 读输入寄存器地址枚举（功能码 04，只读）- 保持原样
+# 读输入寄存器地址枚举（功能码 04，只读）- 按照 O6 协议文档定义
 # ------------------------------------------------------------------
 REG_RD_CURRENT_THUMB_PITCH      = 0   # 大拇指弯曲角度（0-255，小=弯，大=伸）
 REG_RD_CURRENT_THUMB_YAW        = 1   # 大拇指横摆角度（0-255，小=靠掌心，大=远离）
@@ -53,12 +53,27 @@ REG_RD_INDEX_ERROR              = 26  # 食指错误码
 REG_RD_MIDDLE_ERROR             = 27  # 中指错误码
 REG_RD_RING_ERROR               = 28  # 无名指错误码
 REG_RD_LITTLE_ERROR             = 29  # 小拇指错误码
-REG_RD_HAND_FREEDOM             = 30  # 版本号（与机械手标签相同）
-REG_RD_HAND_VERSION             = 31  # 手版本
-REG_RD_HAND_NUMBER              = 32  # 手编号
-REG_RD_HAND_DIRECTION           = 33  # 手方向（左/右）
-REG_RD_SOFTWARE_VERSION         = 34  # 软件版本
-REG_RD_HARDWARE_VERSION         = 35  # 硬件版本
+
+# 版本号/设备编号寄存器（地址 30-44，共15个寄存器）
+REG_RD_HAND_FREEDOM             = 30  # Hand_freedom - 设备编号 / 自由度（与机械手上标签相同）
+REG_RD_HAND_VERSION             = 31  # hand_version - 手版本
+REG_RD_HAND_NUMBER_HIGH         = 32  # hand_number_高位 - 设备编号（高字节）
+REG_RD_HAND_NUMBER_MID          = 33  # hand_number_中位 - 设备编号（中字节）
+REG_RD_HAND_NUMBER_LOW          = 34  # hand_number_低位 - 设备编号（低字节）
+REG_RD_HAND_DIRECTION           = 35  # hand_direction - 手方向（左/右）
+REG_RD_HARDWARE_VERSION_HIGH    = 36  # hardware_version_高位 - 硬件版本（高字节）
+REG_RD_HARDWARE_VERSION_MID     = 37  # hardware_version_中位 - 硬件版本（中字节）
+REG_RD_HARDWARE_VERSION_LOW     = 38  # hardware_version_低位 - 硬件版本（低字节）
+REG_RD_SOFTWARE_VERSION_HIGH    = 39  # software_version_高位 - 软件版本（高字节）
+REG_RD_SOFTWARE_VERSION_MID     = 40  # software_version_中位 - 软件版本（中字节）
+REG_RD_SOFTWARE_VERSION_LOW     = 41  # software_version_低位 - 软件版本（低字节）
+REG_RD_MECHANICAL_VERSION_HIGH  = 42  # mechanical_version_高位 - 机械版本（高字节）
+REG_RD_MECHANICAL_VERSION_MID   = 43  # mechanical_version_中位 - 机械版本（中字节）
+REG_RD_MECHANICAL_VERSION_LOW   = 44  # mechanical_version_低位 - 机械版本（低字节）
+
+# 力传感器寄存器（地址 45-87+，动态范围）
+REG_RD_PRESSURE_SENSING_ID      = 45  # Pressure_Sensing_ID - 压力传感器ID (0-5)
+REG_RD_PRESSURE_SENSING_SPEC    = 46  # Pressure_Sensing_Specifications - 传感器数据规格
 
 
 # ------------------------------------------------------------------
@@ -182,8 +197,105 @@ class LinkerHandO6RS485:
     def read_all_errors(self) -> List[int]:
         return self._execute_read(REG_RD_THUMB_ERROR, 6)
 
-    def read_all_versions(self) -> List[int]:
-        return self._execute_read(REG_RD_HAND_FREEDOM, 6)
+    # ----------------------------------------------------------
+    # 版本号/设备编号读取（按照协议文档：地址30-44，共15个寄存器）
+    # ----------------------------------------------------------
+    def read_all_versions(self) -> str:
+        """一次性读取全部15个寄存器 (地址30-44)，返回以 '.' 连接的字符串。
+        
+        按 O6 协议文档的版本号格式返回：
+            hand_freedom.hand_version.hand_number_high.hand_number_mid.hand_number_low
+            .hand_direction.hardware_ver_hardware_ver_m.hardware_ver_l
+            .software_ver_h.software_ver_m.software_ver_l
+            .mechanical_ver_h.mechanical_ver_m.mechanical_ver_l
+        
+        例如: "6.1.001.002.003.0.1.2.3.4.5.6.7.8.9"
+        """
+        raw = self._execute_read(REG_RD_HAND_FREEDOM, 15)
+        return ".".join(str(v) for v in raw)
+
+    # ----------------------------------------------------------
+    # 基于 read_all_versions() 的设备编号解析方法
+    # ----------------------------------------------------------
+    def _parse_versions(self):
+        """解析 read_all_versions() 返回的字符串为字典"""
+        parts = self.read_all_versions().split(".")
+        if len(parts) < 15:
+            return {}
+        return {
+            "hand_freedom":      int(parts[0]),
+            "hand_version":      int(parts[1]),
+            "hand_number_high":  int(parts[2]),
+            "hand_number_mid":   int(parts[3]),
+            "hand_number_low":   int(parts[4]),
+            "hand_direction":    int(parts[5]),
+            "hw_ver_high":       int(parts[6]),
+            "hw_ver_mid":        int(parts[7]),
+            "hw_ver_low":        int(parts[8]),
+            "sw_ver_high":       int(parts[9]),
+            "sw_ver_mid":        int(parts[10]),
+            "sw_ver_low":        int(parts[11]),
+            "mech_ver_high":     int(parts[12]),
+            "mech_ver_mid":      int(parts[13]),
+            "mech_ver_low":      int(parts[14]),
+        }
+
+    def get_device_number(self) -> str:
+        """获取设备编号（与机械手上标签相同）。格式：高位+中位+低位 拼接的字符串。"""
+        v = self._parse_versions()
+        if not v:
+            return "0"
+        high, mid, low = v["hand_number_high"], v["hand_number_mid"], v["hand_number_low"]
+        # 将每个字节格式化为无前导零的整数（与标签显示一致）
+        return f"{high}{mid}{low}"
+
+    def get_device_number_value(self) -> int:
+        """获取设备编号数值"""
+        v = self._parse_versions()
+        if not v:
+            return 0
+        high, mid, low = v["hand_number_high"], v["hand_number_mid"], v["hand_number_low"]
+        return high * 65536 + mid * 256 + low
+
+    def get_hardware_version(self) -> str:
+        """获取硬件版本号。格式：高.中.低"""
+        v = self._parse_versions()
+        if not v:
+            return "0.0.0"
+        return f"{v['hw_ver_high']}.{v['hw_ver_mid']}.{v['hw_ver_low']}"
+
+    def get_software_version(self) -> str:
+        """获取软件版本号。格式：高.中.低"""
+        v = self._parse_versions()
+        if not v:
+            return "0.0.0"
+        return f"{v['sw_ver_high']}.{v['sw_ver_mid']}.{v['sw_ver_low']}"
+
+    def get_mechanical_version(self) -> str:
+        """获取机械版本号。格式：高.中.低"""
+        v = self._parse_versions()
+        if not v:
+            return "0.0.0"
+        return f"{v['mech_ver_high']}.{v['mech_ver_mid']}.{v['mech_ver_low']}"
+
+    def get_hand_freedom(self) -> int:
+        """获取自由度（与机械手上标签相同）"""
+        v = self._parse_versions()
+        return v.get("hand_freedom", 0)
+
+    def get_hand_version_raw(self) -> int:
+        """获取手版本原始值"""
+        v = self._parse_versions()
+        return v.get("hand_version", 0)
+
+    def get_hand_direction(self) -> str:
+        """获取手方向，转换为字符：76→'L', 82→'R'"""
+        v = self._parse_versions()
+        val = v.get("hand_direction", 0)
+        if val in (76, 82):
+            return chr(val)
+        # fallback: 直接转为字符（如果值在可打印范围内）
+        return chr(val) if 32 < val < 128 else f'Unknown({val})'
 
 
     # ----------------------------------------------------------
@@ -228,12 +340,6 @@ class LinkerHandO6RS485:
     def get_ring_error(self) -> int:        return self._read_reg(REG_RD_RING_ERROR)
     def get_little_error(self) -> int:      return self._read_reg(REG_RD_LITTLE_ERROR)
 
-    def get_hand_freedom(self) -> int:      return self._read_reg(REG_RD_HAND_FREEDOM)
-    def get_hand_version(self) -> int:      return self._read_reg(REG_RD_HAND_VERSION)
-    def get_hand_number(self) -> int:       return self._read_reg(REG_RD_HAND_NUMBER)
-    def get_hand_direction(self) -> int:    return self._read_reg(REG_RD_HAND_DIRECTION)
-    def get_software_version(self) -> int:  return self._read_reg(REG_RD_SOFTWARE_VERSION)
-    def get_hardware_version(self) -> int:  return self._read_reg(REG_RD_HARDWARE_VERSION)
     
     # ----------------------------------------------------------
     # 批量 Getter (使用 read_all_... 方法)
@@ -258,8 +364,8 @@ class LinkerHandO6RS485:
         """获取当前电机故障码"""
         return self.read_all_errors()
     
-    def get_version(self) -> list:
-        """获取当前固件版本号"""
+    def get_version(self) -> str:
+        """获取当前固件版本号（已转换为字符串格式）"""
         return self.read_all_versions()
 
 
@@ -386,20 +492,50 @@ class LinkerHandO6RS485:
     def get_touch(self) -> list:
         return [-1] * 5
     
+    def _pressure(self, finger: int) -> np.ndarray:
+        """
+        读取压力传感器数据 (10x4矩阵)
+        """
+        rows = 10      # 10行
+        cols = 4       # 4列
+        finger_size = rows * cols  # 40个数据点
+        
+        # modbus 地址 (按O6协议文档)
+        write_address = 18   # 写入手指选择 (保持寄存器)
+        read_address = 47    # 读取压力数据 (输入寄存器)
+        read_count = 40      # 读取40个寄存器
+        
+        # 0. 参数校验
+        if finger < 1 or finger > 5:
+            raise ValueError(f"无效的手指编号: {finger}。手指编号应在 1 到 5 之间。")
+        
+        # 1. 写入手指选择寄存器 (地址18)
+        time.sleep(0.01)
+        self._write_reg(write_address, finger)
+        
+        # 2. 读取压力数据
+        data = self._execute_read(read_address, read_count)
+        
+        # 3. 转换为numpy数组并重塑为10x4矩阵
+        finger_matrix = np.array(data, dtype=np.uint8).reshape((rows, cols))
+        
+        return finger_matrix
+    
     def get_thumb_matrix_touch(self,sleep_time=0):
-        return np.full((12, 6), -1)
+        return np.array(self._pressure(1), dtype=np.uint8)
+
 
     def get_index_matrix_touch(self,sleep_time=0):
-        return np.full((12, 6), -1)
+        return np.array(self._pressure(2), dtype=np.uint8)
 
     def get_middle_matrix_touch(self,sleep_time=0):
-        return np.full((12, 6), -1)
+        return np.array(self._pressure(3), dtype=np.uint8)
 
     def get_ring_matrix_touch(self,sleep_time=0):
-        return np.full((12, 6), -1)
+        return np.array(self._pressure(4), dtype=np.uint8)
 
     def get_little_matrix_touch(self,sleep_time=0):
-        return np.full((12, 6), -1)
+        return np.array(self._pressure(5), dtype=np.uint8)
 
     def get_matrix_touch(self) -> list:
         thumb_matrix = np.full((12, 6), -1)
@@ -410,14 +546,18 @@ class LinkerHandO6RS485:
         return thumb_matrix , index_matrix , middle_matrix , ring_matrix , little_matrix
     
     def get_serial_number(self):
-        return [0] * 6
-    
+
+        return "["+str(self.get_hand_freedom())+"-"+str(self.get_mechanical_version())+"-"+str(self.get_device_number())+"-"+str(self.get_hand_direction())+"]"
+
     def get_matrix_touch_v2(self) -> list:
         return self.get_matrix_touch()
+
+    def get_finger_order(self):
+        return ["thumb_cmc_pitch", "thumb_cmc_yaw", "index_mcp_pitch", "middle_mcp_pitch", "ring_mcp_pitch", "pinky_mcp_pitch"]
     
-    # ----------------------------------------------------------
-    # 上下文管理
-    # ----------------------------------------------------------
+    def clear_faults(self):
+        pass
+    
     def close(self):
         if hasattr(self, 'connected') and self.connected:
             self.cli.close()
@@ -462,13 +602,27 @@ class LinkerHandO6RS485:
         angles = self.get_state()
         temps = self.get_temperature()
         errors = self.get_fault()
-        versions = self.get_version()
+        
+        # 解析版本号字符串
+        v = self._parse_versions()
 
-        print(f"Joint Angles: {angles}")
-        print(f"Temperature:  {temps}℃")
-        print(f"Error Codes:  {errors}")
-        print(f"Versions:     {versions}")
+        if v:
+            device_num_str = f"{v['hand_number_high']}{v['hand_number_mid']}{v['hand_number_low']}"
+            hw_ver = f"{v['hw_ver_high']}.{v['hw_ver_mid']}.{v['hw_ver_low']}"
+            sw_ver = f"{v['sw_ver_high']}.{v['sw_ver_mid']}.{v['sw_ver_low']}"
+            mech_ver = f"{v['mech_ver_high']}.{v['mech_ver_mid']}.{v['mech_ver_low']}"
+            
+            print(f"Device Number:   {device_num_str}")
+            print(f"HWSW Version:    HW={hw_ver} SW={sw_ver}")
+            print(f"Mechanical Ver:  {mech_ver}")
+            print(f"Hand Freedom:    {v['hand_freedom']}")
+            print(f"Full Version:    {self.read_all_versions()}")
+
+        print(f"Joint Angles:    {angles}")
+        print(f"Temperature:     {temps}℃")
+        print(f"Error Codes:     {errors}")
         print("----------------------------------")
+
 
 # ------------------------------------------------------------------
 # 命令行快速测试
@@ -489,7 +643,16 @@ if __name__ == "__main__":
         # 使用 with 语句确保连接关闭，这是 pymodbus 的推荐用法
         with LinkerHandO6RS485(hand_id=args.hand_id, modbus_port=args.port, baudrate=115200) as hand:
             hand.dump_status()
-            print("执行 relax → 伸直")
+
+            # 测试新增的设备编号读取方法
+            print("\n--- 设备信息 ---")
+            print(f"设备编号（字符串）: {hand.get_device_number()}")
+            print(f"设备编号（数值）:   {hand.get_device_number_value()}")
+            print(f"硬件版本号:         {hand.get_hardware_version()}")
+            print(f"软件版本号:         {hand.get_software_version()}")
+            print(f"机械版本号:         {hand.get_mechanical_version()}")
+
+            print("\n执行 relax → 伸直")
             hand.relax()
             time.sleep(1)
             print("执行 fist → 握拳")
