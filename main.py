@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
         self.init_hand_thread()
 
 
-#===================hand thread=========================
+#region===================hand thread=========================
     def init_hand_thread(self):
         self.hand_thread = QThread()
         self.hand = LinkHand(name="LinkHand", hand_type="left", hand_joint="O6", modbus = "None",can="can0")
@@ -226,12 +226,12 @@ class MainWindow(QMainWindow):
             self.sig_request_hand_connect.emit()
 
     def on_pushButton_test_hand_clicked(self):
-        self.sig_request_hand_set_joint_positions.emit([100, 255, 255, 255, 255, 255])
+        self.sig_request_hand_set_joint_positions.emit([255, 255, 255, 255, 255, 255])
 
-#===================hand thread=========================
+#endregion===================hand thread=========================
 
 
-# ================= 遥操作控制器 =================
+#region================= 遥操作控制器 =================
 
     def on_pushButton_start_follow_clicked(self):
         if self.if_start_follow:
@@ -252,7 +252,7 @@ class MainWindow(QMainWindow):
             self.ui.label.setText("Teleoperation: Stopped")
 
 
-# ================= 遥操作控制器 =================
+# endregion================= 遥操作控制器 =================
 
 
  #region================= master arm thread =====================
