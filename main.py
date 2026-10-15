@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLineEdit
 from PySide6.QtCore import QThread, Signal, QTimer, QSignalBlocker
@@ -9,9 +10,11 @@ from src.ui.log_stream import Logger
 from src.devices.robot_factory import create_slave_arm
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
+from src.threads.hand_thread import HandThread
 from src.devices.drivers.gello_arm import GelloArm
 from serial.tools import list_ports
 from src.shared_data.robot_share_data import RobotSharedMemory
+from src.devices.drivers.Link_hand import LinkHand
 
 class MainWindow(QMainWindow):
 
@@ -32,6 +35,13 @@ class MainWindow(QMainWindow):
     sig_request_master_read_pos = Signal(int)
     sig_request_master_stop_read_pos = Signal()
 
+    #define signals to request actions in the hand thread
+    sig_request_hand_connect = Signal()
+    sig_request_hand_disconnect = Signal()
+    sig_request_hand_set_joint_positions = Signal(list)
+    sig_request_hand_set_speed = Signal(list)
+
+
     #test
     sig_request_open_servoj = Signal()
     sig_request_close_servoj = Signal()
@@ -49,6 +59,7 @@ class MainWindow(QMainWindow):
         self.if_master_connected = False
         self.if_slave_connected = False
         self.if_slave_power_on = False
+        self.if_hand_connected = False
 
         self.if_start_follow = False
 
@@ -97,6 +108,12 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_start_follow.clicked.connect(self.on_pushButton_start_follow_clicked)
         self.ui.comboBox_robot_type.currentTextChanged.connect(self.on_robot_type_changed)
 
+        #Bind button click command hand
+        self.ui.pushButton_refresh_hand_connect_info.clicked.connect(self.on_pushButton_refresh_hand_connect_info_clicked)
+        self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
+
+        #test
+        self.ui.pushButton_test_hand.clicked.connect(self.on_pushButton_test_hand_clicked)
 
     def show_settings(self):
         self.settings_dialog.show()
@@ -109,6 +126,109 @@ class MainWindow(QMainWindow):
 
         #init master arm thread
         self.init_master_arm_thread()
+
+        #init hand thread
+        self.init_hand_thread()
+
+
+#===================hand thread=========================
+    def init_hand_thread(self):
+        self.hand_thread = QThread()
+        self.hand = LinkHand(name="LinkHand", hand_type="left", hand_joint="O6", modbus = "None",can="can0")
+        self.hand_worker = HandThread(self.hand, self.shared_robot_data)
+        self.hand_worker.moveToThread(self.hand_thread)
+
+        # Connect signals to the worker's slots
+        self.sig_request_hand_connect.connect(self.hand_worker.Connect)
+        self.sig_request_hand_disconnect.connect(self.hand_worker.Disconnect)
+        self.sig_request_hand_set_joint_positions.connect(self.hand_worker.Set_joint_positions)
+        self.sig_request_hand_set_speed.connect(self.hand_worker.Set_speed)
+
+        # Connect the worker's signals to the main window's slots
+        self.hand_worker.sig_connect_result.connect(self.on_hand_connect_result)
+        self.hand_worker.sig_disconnect_result.connect(self.on_hand_disconnect_result)
+
+        self.hand_thread.start()
+
+    def on_hand_connect_result(self, success, msg):
+        if success:
+            Logger.instance().info(f"[LinkHand] connected successfully")
+            self.ui.pushButton_connect_hand.setText("Disconnect")
+            self.if_hand_connected = True   
+        else:
+            Logger.instance().error(f"[LinkHand] failed to connect: {msg}")
+
+    def on_hand_disconnect_result(self, success, msg):
+        if success:
+            Logger.instance().info(f"[LinkHand] disconnected successfully")
+            self.ui.pushButton_connect_hand.setText("Connect")
+            self.if_hand_connected = False
+        else:
+            Logger.instance().error(f"[LinkHand] failed to disconnect: {msg}")
+
+    def on_pushButton_refresh_hand_connect_info_clicked(self):
+        combo = self.ui.comboBox_hand_comm_info
+        previous_port = combo.currentText()
+        combo.clear()
+        comm_type = self.ui.comboBox_hand_comm_type.currentText().strip().lower()
+
+        try:
+            if comm_type in ("modebus", "modbus"):
+                ports = [
+                    port.device for port in list_ports.comports()
+                    if port.vid is not None
+                    or port.device.startswith(("/dev/ttyUSB", "/dev/ttyACM"))
+                ]
+            elif comm_type == "can":
+                ports = []
+                # Linux ARPHRD_CAN = 280; also detects renamed CAN interfaces.
+                for interface in Path("/sys/class/net").glob("*"):
+                    try:
+                        if (interface / "type").read_text().strip() == "280":
+                            ports.append(interface.name)
+                    except OSError:
+                        # An interface may disappear while refreshing.
+                        continue
+            else:
+                return
+
+            combo.addItems(sorted(set(ports)))
+            index = combo.findText(previous_port)
+            if index >= 0:
+                combo.setCurrentIndex(index)
+        except Exception as e:
+            Logger.instance().error(f"[LinkHand] 刷新通信端口失败: {e}")
+
+    def on_pushButton_hand_connect_clicked(self):
+        if self.if_hand_connected:
+            self.sig_request_hand_disconnect.emit()
+        else:
+            hand_model = self.ui.comboBox_hand_model.currentText().strip()
+            hand_type_ = self.ui.comboBox_hand_type.currentText().strip()
+            hand_comm_type = self.ui.comboBox_hand_comm_type.currentText().strip()
+            hand_comm_info = self.ui.comboBox_hand_comm_info.currentText().strip()
+
+            if hand_model == "LinkerO6":
+                self.hand.hand_joint = "O6"
+
+            if hand_type_ == "Right Hand":
+                self.hand.hand_type = "right"
+            if hand_type_ == "Left Hand":
+                self.hand.hand_type = "left"
+
+            if hand_comm_type.lower() in ("modbus", "modebus"):
+                self.hand.modbus = hand_comm_info
+                self.hand.can = "can0"  # Default CAN interface when using Modbus
+            elif hand_comm_type.lower() == "can":
+                self.hand.can = hand_comm_info
+                self.hand.modbus = "None"  # Default Modbus when using CAN
+
+            self.sig_request_hand_connect.emit()
+
+    def on_pushButton_test_hand_clicked(self):
+        self.sig_request_hand_set_joint_positions.emit([100, 255, 255, 255, 255, 255])
+
+#===================hand thread=========================
 
 
 # ================= 遥操作控制器 =================
@@ -376,6 +496,11 @@ class MainWindow(QMainWindow):
 
     # region ================= 安全退出 =================
     def closeEvent(self, event):
+        # Stop the hand worker before its QThread is destroyed.
+        Logger.instance().info("Closing hand thread...")
+        self.hand_thread.quit()
+        self.hand_thread.wait()
+
         # Stop the slave arm thread
         Logger.instance().info("Closing slave arm thread...")
         self.slave_arm_thread.quit()

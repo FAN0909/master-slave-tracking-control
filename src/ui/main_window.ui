@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1054</width>
-    <height>769</height>
+    <height>791</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -458,9 +458,9 @@
    <widget class="QGroupBox" name="groupBox_log">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>475</y>
-      <width>1011</width>
+      <x>0</x>
+      <y>530</y>
+      <width>1051</width>
       <height>231</height>
      </rect>
     </property>
@@ -540,6 +540,113 @@
     </property>
     <property name="text">
      <string>20</string>
+    </property>
+   </widget>
+   <widget class="QWidget" name="gridLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>341</x>
+      <y>390</y>
+      <width>701</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_5">
+     <item row="1" column="1">
+      <widget class="QComboBox" name="comboBox_hand_type">
+       <item>
+        <property name="text">
+         <string>Right Hand</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Left Hand</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="0" column="3">
+      <widget class="QComboBox" name="comboBox_hand_comm_type">
+       <item>
+        <property name="text">
+         <string>Modebus</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Can</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="4">
+      <widget class="QPushButton" name="pushButton_connect_hand">
+       <property name="text">
+        <string>Connect</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="4">
+      <widget class="QPushButton" name="pushButton_refresh_hand_connect_info">
+       <property name="text">
+        <string>Refresh</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="comboBox_hand_model">
+       <item>
+        <property name="text">
+         <string>LinkerO6</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="label_34">
+       <property name="text">
+        <string>Type</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_33">
+       <property name="text">
+        <string>Model</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="3">
+      <widget class="QComboBox" name="comboBox_hand_comm_info"/>
+     </item>
+     <item row="0" column="2">
+      <widget class="QLabel" name="label_35">
+       <property name="text">
+        <string>Comm Type</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="2">
+      <widget class="QLabel" name="label_36">
+       <property name="text">
+        <string>Comm Info</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QPushButton" name="pushButton_test_hand">
+    <property name="geometry">
+     <rect>
+      <x>600</x>
+      <y>470</y>
+      <width>95</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PushButton</string>
     </property>
    </widget>
   </widget>
