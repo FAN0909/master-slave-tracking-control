@@ -17,8 +17,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QSizePolicy, QSpacerItem, QTabWidget,
-    QVBoxLayout, QWidget)
+    QLineEdit, QPushButton, QSizePolicy, QSpacerItem,
+    QTabWidget, QVBoxLayout, QWidget)
 
 class Ui_SettingsDialog(object):
     def setupUi(self, SettingsDialog):
@@ -79,6 +79,9 @@ class Ui_SettingsDialog(object):
 
         self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.lineEdit_slave_arm_jerk)
 
+        self.pushButton_save_slave_param = QPushButton(self.groupBox_2)
+        self.pushButton_save_slave_param.setObjectName(u"pushButton_save_slave_param")
+        self.pushButton_save_slave_param.setGeometry(QRect(90, 180, 95, 25))
 
         self.horizontalLayout.addWidget(self.groupBox_2)
 
@@ -133,7 +136,7 @@ class Ui_SettingsDialog(object):
     # setupUi
 
     def retranslateUi(self, SettingsDialog):
-        SettingsDialog.setWindowTitle(QCoreApplication.translate("SettingsDialog", u"\u8bbe\u7f6e", None))
+        SettingsDialog.setWindowTitle(QCoreApplication.translate("SettingsDialog", u"Setting", None))
         self.groupBox.setTitle(QCoreApplication.translate("SettingsDialog", u"MasterRobot", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("SettingsDialog", u"SlaveRobot", None))
         self.label.setText(QCoreApplication.translate("SettingsDialog", u"Vel(\u00b0/s)", None))
@@ -142,6 +145,7 @@ class Ui_SettingsDialog(object):
         self.lineEdit_slave_arm_vel.setText(QCoreApplication.translate("SettingsDialog", u"80", None))
         self.lineEdit_slave_arm_acc.setText(QCoreApplication.translate("SettingsDialog", u"1000", None))
         self.lineEdit_slave_arm_jerk.setText(QCoreApplication.translate("SettingsDialog", u"1000", None))
+        self.pushButton_save_slave_param.setText(QCoreApplication.translate("SettingsDialog", u"Save", None))
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_robotset), QCoreApplication.translate("SettingsDialog", u"Robot Set", None))
         self.label_camera.setText(QCoreApplication.translate("SettingsDialog", u"\u76f8\u673a\u8bbe\u7f6e", None))
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_cameraset), QCoreApplication.translate("SettingsDialog", u"Camera Set", None))

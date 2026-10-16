@@ -465,16 +465,19 @@ class Ui_MainWindow(object):
         self.lineEdit_follow_rate.setGeometry(QRect(140, 400, 113, 25))
         self.gridLayoutWidget = QWidget(self.centralwidget)
         self.gridLayoutWidget.setObjectName(u"gridLayoutWidget")
-        self.gridLayoutWidget.setGeometry(QRect(341, 390, 701, 71))
+        self.gridLayoutWidget.setGeometry(QRect(290, 390, 762, 86))
         self.gridLayout_5 = QGridLayout(self.gridLayoutWidget)
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.gridLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.comboBox_hand_type = QComboBox(self.gridLayoutWidget)
-        self.comboBox_hand_type.addItem("")
-        self.comboBox_hand_type.addItem("")
-        self.comboBox_hand_type.setObjectName(u"comboBox_hand_type")
+        self.pushButton_connect_hand = QPushButton(self.gridLayoutWidget)
+        self.pushButton_connect_hand.setObjectName(u"pushButton_connect_hand")
 
-        self.gridLayout_5.addWidget(self.comboBox_hand_type, 1, 1, 1, 1)
+        self.gridLayout_5.addWidget(self.pushButton_connect_hand, 1, 4, 1, 1)
+
+        self.label_34 = QLabel(self.gridLayoutWidget)
+        self.label_34.setObjectName(u"label_34")
+
+        self.gridLayout_5.addWidget(self.label_34, 1, 0, 1, 1)
 
         self.comboBox_hand_comm_type = QComboBox(self.gridLayoutWidget)
         self.comboBox_hand_comm_type.addItem("")
@@ -483,15 +486,37 @@ class Ui_MainWindow(object):
 
         self.gridLayout_5.addWidget(self.comboBox_hand_comm_type, 0, 3, 1, 1)
 
-        self.pushButton_connect_hand = QPushButton(self.gridLayoutWidget)
-        self.pushButton_connect_hand.setObjectName(u"pushButton_connect_hand")
+        self.label_35 = QLabel(self.gridLayoutWidget)
+        self.label_35.setObjectName(u"label_35")
 
-        self.gridLayout_5.addWidget(self.pushButton_connect_hand, 1, 4, 1, 1)
+        self.gridLayout_5.addWidget(self.label_35, 0, 2, 1, 1)
+
+        self.comboBox_hand_comm_info = QComboBox(self.gridLayoutWidget)
+        self.comboBox_hand_comm_info.setObjectName(u"comboBox_hand_comm_info")
+
+        self.gridLayout_5.addWidget(self.comboBox_hand_comm_info, 1, 3, 1, 1)
+
+        self.label_36 = QLabel(self.gridLayoutWidget)
+        self.label_36.setObjectName(u"label_36")
+
+        self.gridLayout_5.addWidget(self.label_36, 1, 2, 1, 1)
+
+        self.comboBox_hand_type = QComboBox(self.gridLayoutWidget)
+        self.comboBox_hand_type.addItem("")
+        self.comboBox_hand_type.addItem("")
+        self.comboBox_hand_type.setObjectName(u"comboBox_hand_type")
+
+        self.gridLayout_5.addWidget(self.comboBox_hand_type, 1, 1, 1, 1)
 
         self.pushButton_refresh_hand_connect_info = QPushButton(self.gridLayoutWidget)
         self.pushButton_refresh_hand_connect_info.setObjectName(u"pushButton_refresh_hand_connect_info")
 
         self.gridLayout_5.addWidget(self.pushButton_refresh_hand_connect_info, 0, 4, 1, 1)
+
+        self.label_33 = QLabel(self.gridLayoutWidget)
+        self.label_33.setObjectName(u"label_33")
+
+        self.gridLayout_5.addWidget(self.label_33, 0, 0, 1, 1)
 
         self.comboBox_hand_model = QComboBox(self.gridLayoutWidget)
         self.comboBox_hand_model.addItem("")
@@ -499,34 +524,12 @@ class Ui_MainWindow(object):
 
         self.gridLayout_5.addWidget(self.comboBox_hand_model, 0, 1, 1, 1)
 
-        self.label_34 = QLabel(self.gridLayoutWidget)
-        self.label_34.setObjectName(u"label_34")
-
-        self.gridLayout_5.addWidget(self.label_34, 1, 0, 1, 1)
-
-        self.label_33 = QLabel(self.gridLayoutWidget)
-        self.label_33.setObjectName(u"label_33")
-
-        self.gridLayout_5.addWidget(self.label_33, 0, 0, 1, 1)
-
-        self.comboBox_hand_comm_info = QComboBox(self.gridLayoutWidget)
-        self.comboBox_hand_comm_info.setObjectName(u"comboBox_hand_comm_info")
-
-        self.gridLayout_5.addWidget(self.comboBox_hand_comm_info, 1, 3, 1, 1)
-
-        self.label_35 = QLabel(self.gridLayoutWidget)
-        self.label_35.setObjectName(u"label_35")
-
-        self.gridLayout_5.addWidget(self.label_35, 0, 2, 1, 1)
-
-        self.label_36 = QLabel(self.gridLayoutWidget)
-        self.label_36.setObjectName(u"label_36")
-
-        self.gridLayout_5.addWidget(self.label_36, 1, 2, 1, 1)
-
         self.pushButton_test_hand = QPushButton(self.centralwidget)
         self.pushButton_test_hand.setObjectName(u"pushButton_test_hand")
-        self.pushButton_test_hand.setGeometry(QRect(600, 470, 95, 25))
+        self.pushButton_test_hand.setGeometry(QRect(340, 490, 95, 25))
+        self.label_37 = QLabel(self.centralwidget)
+        self.label_37.setObjectName(u"label_37")
+        self.label_37.setGeometry(QRect(550, 480, 428, 22))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -597,20 +600,21 @@ class Ui_MainWindow(object):
         self.plainTextEdit_log.setStyleSheet(QCoreApplication.translate("MainWindow", u"QPlainTextEdit { background: #18212b; color: #e0e6ed; border: 1px solid #354353; border-radius: 4px; padding: 6px; }", None))
         self.plainTextEdit_log.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u8fd0\u884c\u65e5\u5fd7\u5c06\u663e\u793a\u5728\u8fd9\u91cc\u2026", None))
         self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
-        self.comboBox_hand_type.setItemText(0, QCoreApplication.translate("MainWindow", u"Right Hand", None))
-        self.comboBox_hand_type.setItemText(1, QCoreApplication.translate("MainWindow", u"Left Hand", None))
-
+        self.pushButton_connect_hand.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.label_34.setText(QCoreApplication.translate("MainWindow", u"Type", None))
         self.comboBox_hand_comm_type.setItemText(0, QCoreApplication.translate("MainWindow", u"Modebus", None))
         self.comboBox_hand_comm_type.setItemText(1, QCoreApplication.translate("MainWindow", u"Can", None))
 
-        self.pushButton_connect_hand.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
-        self.pushButton_refresh_hand_connect_info.setText(QCoreApplication.translate("MainWindow", u"Refresh", None))
-        self.comboBox_hand_model.setItemText(0, QCoreApplication.translate("MainWindow", u"LinkerO6", None))
-
-        self.label_34.setText(QCoreApplication.translate("MainWindow", u"Type", None))
-        self.label_33.setText(QCoreApplication.translate("MainWindow", u"Model", None))
         self.label_35.setText(QCoreApplication.translate("MainWindow", u"Comm Type", None))
         self.label_36.setText(QCoreApplication.translate("MainWindow", u"Comm Info", None))
+        self.comboBox_hand_type.setItemText(0, QCoreApplication.translate("MainWindow", u"Right Hand", None))
+        self.comboBox_hand_type.setItemText(1, QCoreApplication.translate("MainWindow", u"Left Hand", None))
+
+        self.pushButton_refresh_hand_connect_info.setText(QCoreApplication.translate("MainWindow", u"Refresh", None))
+        self.label_33.setText(QCoreApplication.translate("MainWindow", u"Model", None))
+        self.comboBox_hand_model.setItemText(0, QCoreApplication.translate("MainWindow", u"LinkerO6", None))
+
         self.pushButton_test_hand.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
+        self.label_37.setText(QCoreApplication.translate("MainWindow", u"\u8fd9\u91cc\u6ce8\u610f \u5982\u679c\u662fubuntu\u4e0b\u7528can  \u9700\u8981\u5728\u914d\u7f6e\u6587\u4ef6\u4e2d\u5199\u5165root\u5bc6\u7801", None))
     # retranslateUi
 

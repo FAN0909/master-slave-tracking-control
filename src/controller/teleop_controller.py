@@ -8,16 +8,8 @@ class MasterSlaveTeleopCalculator:
         self.shared_data = shared_data
 
         # 关节方向与缩放
-        self.joint_sign = [
-            1.0,   # joint0
-            1.0,   # joint1
-            -1.0,  # joint2 反向
-            1.0,   # joint3
-            1.0,   # joint4
-            1.0,   # joint5
-            1.0    # joint6
-        ]
-        self.joint_scale = [1.0] * 7
+        self.joint_sign = []
+        self.joint_scale = []
         self.position_deadband_deg = 0.1
 
         # 会话状态
@@ -27,28 +19,33 @@ class MasterSlaveTeleopCalculator:
     def reset(self):
         master_state = self.shared_data.master.read()
         master_joints = master_state.joints
-        if master_joints is None or len(master_joints) != 7:
+        joint_count = len(self.shared_data.slave.read().joints)
+        if not master_joints or len(master_joints) != joint_count:
             Logger.instance().error("[Teleop] master joint data invalid, reset failed")
             self.master_start_positions = None
             self._sent_offset = None
             return False
         self.master_start_positions = list(master_joints)
-        self._sent_offset = [0.0] * 7
+        self.joint_sign = [-1.0 if index == 2 else 1.0 for index in range(joint_count)]
+        self.joint_scale = [1.0] * joint_count
+        self._sent_offset = [0.0] * joint_count
         return True
 
 
     def compute_increment(self) -> list:
         """
         每帧调用，内部自动读共享内存主手，返回本帧增量delta列表
-        return: 7个关节增量
+        return: 与当前从手关节数一致的增量
         """
+        joint_count = len(self.shared_data.slave.read().joints)
         if self.master_start_positions is None or self._sent_offset is None:
-            return [0.0] * 7
+            return [0.0] * joint_count
 
         master_state = self.shared_data.master.read()
         master_joints = master_state.joints
-        if master_joints is None or len(master_joints) != 7:
-            return [0.0] * 7
+        if (not master_joints or len(master_joints) != joint_count
+                or len(self.master_start_positions) != joint_count):
+            return [0.0] * joint_count
 
         # 期望总偏移
         desired_offset = [

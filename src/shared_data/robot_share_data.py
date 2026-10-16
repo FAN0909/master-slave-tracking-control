@@ -2,19 +2,13 @@ import threading
 from dataclasses import dataclass, replace
 from typing import List
 
-# ===================== 配置常量 =====================
-MASTER_JOINT_COUNT: int = 7
-SLAVE_JOINT_COUNT: int = 7
-MASTER_TCP_DIM: int = 6
-SLAVE_TCP_DIM: int = 6
-SLAVE_INCREMENT_COUNT: int = 7
-
 # ===================== 状态结构体 =====================
 @dataclass
 class MasterState:
     """主手整套状态：由同一个线程更新"""
     joints: List[float]
     tcp: List[float]
+    name: str = ""  # 当前主手设备名称
     # 后续扩展在这里追加字段，如：
     # force: List[float]
     # timestamp: float
@@ -24,7 +18,8 @@ class MasterState:
         """手动拷贝，生成独立快照"""
         return MasterState(
             joints=self.joints.copy(),
-            tcp=self.tcp.copy()
+            tcp=self.tcp.copy(),
+            name=self.name,
         )
 
 
@@ -33,13 +28,15 @@ class SlaveState:
     """从手整套状态：由另一个独立线程更新"""
     joints: List[float]
     tcp: List[float]
+    name: str = ""  # 当前从手设备名称
     # 后续扩展：force、status、imu等
 
     def snapshot(self):
         """手动拷贝，生成独立快照"""
         return SlaveState(
             joints=self.joints.copy(),
-            tcp=self.tcp.copy()
+            tcp=self.tcp.copy(),
+            name=self.name,
         )
 
 
@@ -85,20 +82,20 @@ class RobotSharedMemory:
     def __init__(self):
         # 主手初始状态
         init_master = MasterState(
-            joints=[0.0] * MASTER_JOINT_COUNT,
-            tcp=[0.0] * MASTER_TCP_DIM
+            joints=[],
+            tcp=[]
         )
         self.master = SharedStateContainer(init_master)
 
         # 从手初始状态
         init_slave = SlaveState(
-            joints=[0.0] * SLAVE_JOINT_COUNT,
-            tcp=[0.0] * SLAVE_TCP_DIM
+            joints=[],
+            tcp=[]
         )
         self.slave = SharedStateContainer(init_slave)
 
         # 从手遥控关节增量
         init_slave_inc = SlaveIncrementState(
-            delta_joints=[0.0] * SLAVE_INCREMENT_COUNT
+            delta_joints=[]
         )
         self.slave_increment = SharedStateContainer(init_slave_inc)

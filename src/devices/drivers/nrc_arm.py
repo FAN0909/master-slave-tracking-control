@@ -36,7 +36,12 @@ class NrcArm(BaseRobotArm):
         try:
             with path.open(encoding="utf-8") as file:
                 config = json.load(file)["NRC"]
-            for key in ("MAX_POSITION_SIZE", "JOINT_COORD", "TCP_COORD"):
+            for key in ("MAX_JOINT_COUNT", "TCP_DIM"):
+                value = config[key]
+                if type(value) is not int or value <= 0:
+                    raise ValueError(f"{key} 必须是正整数")
+                setattr(self, key, value)
+            for key in ("JOINT_COORD", "TCP_COORD"):
                 setattr(self, key, config[key])
             # 单位分别为 °/s、°/s²、°/s³。
             for key in ("SERVO_J_VMAX", "SERVO_J_AVMAX", "SERVO_J_JMAX"):
@@ -106,7 +111,7 @@ class NrcArm(BaseRobotArm):
     def Get_joint_positions(self) -> list:
         try:
                 output = nrc_interface.VectorDouble()
-                output.resize(self.MAX_POSITION_SIZE)
+                output.resize(self.MAX_JOINT_COUNT)
 
                 result = nrc_interface.get_current_position(
                     self.command_fd,
@@ -116,18 +121,18 @@ class NrcArm(BaseRobotArm):
 
                 if result != 0:
                     Logger.instance().error(f"[{self.name}] get_current_position failed: {result}")
-                    return [0.0] * self.MAX_POSITION_SIZE
+                    return [0.0] * self.MAX_JOINT_COUNT
 
                 return [float(value) for value in output]
 
         except Exception as e:
                 Logger.instance().error(f"[{self.name}] get_current_position error: {e}")
-                return [0.0] * self.MAX_POSITION_SIZE
+                return [0.0] * self.MAX_JOINT_COUNT
 
     def Get_tcp_positions(self) -> list:
         try:
                 output = nrc_interface.VectorDouble()
-                output.resize(self.MAX_POSITION_SIZE)
+                output.resize(self.MAX_JOINT_COUNT)
 
                 result = nrc_interface.get_current_position(
                     self.command_fd,
@@ -137,13 +142,13 @@ class NrcArm(BaseRobotArm):
 
                 if result != 0:
                     Logger.instance().error(f"[{self.name}] get_current_position failed: {result}")
-                    return [0.0] * self.MAX_POSITION_SIZE
+                    return [0.0] * self.TCP_DIM
 
-                return [float(value) for value in output]
+                return [float(value) for value in output][:self.TCP_DIM]
 
         except Exception as e:
                 Logger.instance().error(f"[{self.name}] get_current_position error: {e}")
-                return [0.0] * self.MAX_POSITION_SIZE
+                return [0.0] * self.TCP_DIM
 
     def Move_j(
         self,
@@ -154,7 +159,7 @@ class NrcArm(BaseRobotArm):
     ) -> bool:
 
         # 1. 检查关节数量
-        if len(joint_positions) != self.MAX_POSITION_SIZE:
+        if len(joint_positions) != self.MAX_JOINT_COUNT:
             return False
 
         # 2. 创建 MoveJ 指令
@@ -167,7 +172,7 @@ class NrcArm(BaseRobotArm):
         cmd.coord = self.JOINT_COORD
 
         # 4. 设置目标位置
-        cmd.targetPosValue.resize(self.MAX_POSITION_SIZE)
+        cmd.targetPosValue.resize(self.MAX_JOINT_COUNT)
 
         for i, position in enumerate(joint_positions):
             cmd.targetPosValue[i] = position
@@ -208,13 +213,13 @@ class NrcArm(BaseRobotArm):
         cmd.coord = self.TCP_COORD
 
         # 设置目标位置
-        cmd.targetPosValue.resize(self.MAX_POSITION_SIZE)
+        cmd.targetPosValue.resize(self.MAX_JOINT_COUNT)
 
         for i, position in enumerate(tcp_positions):
             cmd.targetPosValue[i] = float(position)
 
         # 其余位置补 0
-        for i in range(len(tcp_positions), self.MAX_POSITION_SIZE):
+        for i in range(len(tcp_positions), self.MAX_JOINT_COUNT):
             cmd.targetPosValue[i] = 0.0
 
         # 调用 SDK
@@ -238,9 +243,9 @@ class NrcArm(BaseRobotArm):
         try:
 
             # servoJ 约束
-            vMax  = nrc_interface.VectorDouble([self.SERVO_J_VMAX]  * self.MAX_POSITION_SIZE)
-            avMax = nrc_interface.VectorDouble([self.SERVO_J_AVMAX] * self.MAX_POSITION_SIZE)
-            jMax  = nrc_interface.VectorDouble([self.SERVO_J_JMAX]  * self.MAX_POSITION_SIZE)
+            vMax  = nrc_interface.VectorDouble([self.SERVO_J_VMAX]  * self.MAX_JOINT_COUNT)
+            avMax = nrc_interface.VectorDouble([self.SERVO_J_AVMAX] * self.MAX_JOINT_COUNT)
+            jMax  = nrc_interface.VectorDouble([self.SERVO_J_JMAX]  * self.MAX_JOINT_COUNT)
 
             result = nrc_interface.open_servoJ(
                 self.servo_fd, vMax, avMax, jMax
@@ -282,7 +287,7 @@ class NrcArm(BaseRobotArm):
 
         try:
             pos = nrc_interface.VectorDouble()
-            pos.resize(self.MAX_POSITION_SIZE)
+            pos.resize(self.MAX_JOINT_COUNT)
             for i, v in enumerate(target_positions):
                 pos[i] = float(v)
 

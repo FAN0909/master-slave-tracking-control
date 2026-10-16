@@ -2,8 +2,8 @@ from src.ui.log_stream import Logger
 
 from PySide6.QtCore import QObject, Signal, Slot, QTimer, Qt
 from src.devices.base.base_robotArm import BaseRobotArm
-from src.devices.robot_factory import create_slave_arm
-from src.shared_data.robot_share_data import RobotSharedMemory,SlaveState
+from src.devices.drivers_factory import create_slave_arm
+from src.shared_data.robot_share_data import RobotSharedMemory
 from src.controller.teleop_controller import MasterSlaveTeleopCalculator
 class SlaveRobotThread(QObject):
 
@@ -15,11 +15,14 @@ class SlaveRobotThread(QObject):
         sig_tcp_positions = Signal(list)
         sig_robot_type_result = Signal(bool, str, str)
 
+        sig_follow_result = Signal(bool)
+
         def __init__(self, arm: BaseRobotArm, shared_data: RobotSharedMemory, robot_type="NRC"):
             super().__init__()
             self.arm = arm
             self.robot_type = robot_type
             self.shared_data = shared_data
+            self.reset_shared_positions()
             self.if_connected = False
             self.if_power_on = False
             self.if_servoj_open = False
@@ -38,6 +41,15 @@ class SlaveRobotThread(QObject):
             self.timer_follow.timeout.connect(self.RunFollow)
 
             self.teleop_controller = MasterSlaveTeleopCalculator(shared_data)
+
+        def reset_shared_positions(self):
+            self.shared_data.slave.update_partial(
+                joints=[0.0] * self.arm.MAX_JOINT_COUNT,
+                tcp=[0.0] * self.arm.TCP_DIM,
+            )
+            self.shared_data.slave_increment.update_partial(
+                delta_joints=[0.0] * self.arm.MAX_JOINT_COUNT,
+            )
 
         @Slot(str)
         def ChangeRobotType(self, robot_type):
@@ -63,7 +75,7 @@ class SlaveRobotThread(QObject):
             self.servo_target_positions = None
             self._resume_read_timer_interval = None
             self.teleop_controller = MasterSlaveTeleopCalculator(self.shared_data)
-            self.shared_data.slave.write(SlaveState(joints=[0.0] * 7, tcp=[0.0] * 6))
+            self.reset_shared_positions()
             message = f"从手已切换为 {robot_type}，请重新连接"
             Logger.instance().info(message)
             self.sig_robot_type_result.emit(True, robot_type, message)
@@ -84,8 +96,7 @@ class SlaveRobotThread(QObject):
             joint_pos = self.arm.Get_joint_positions()
             tcp_pos = self.arm.Get_tcp_positions()   
 
-            slave_state = SlaveState(joints=joint_pos, tcp=tcp_pos)
-            self.shared_data.slave.write(slave_state)
+            self.shared_data.slave.update_partial(joints=joint_pos, tcp=tcp_pos)
 
             self.sig_joint_positions.emit(joint_pos)
             self.sig_tcp_positions.emit(tcp_pos)
@@ -94,6 +105,8 @@ class SlaveRobotThread(QObject):
         def Connect(self, ip_address: str) -> bool:
             self.arm.ip_address = ip_address
             if self.arm.Connect():
+                self.reset_shared_positions()
+                self.shared_data.slave.update_partial(name=self.arm.name)
                 self.if_connected = True
                 self.sig_connect_result.emit(True, "connected successfully")
                 return True
@@ -188,6 +201,7 @@ class SlaveRobotThread(QObject):
                 self.OpenServoJ()
             if not self.if_servoj_open:
                 Logger.instance().error("ServoJ未打开，无法启动跟随")
+                self.sig_follow_result.emit(False)
                 return
             # 初始化伺服目标为当前从手位置
             self.servo_target_positions = self.arm.Get_joint_positions()
@@ -195,11 +209,14 @@ class SlaveRobotThread(QObject):
             ok = self.teleop_controller.reset()
             if not ok:
                 Logger.instance().error("遥操作重置失败，主手数据无效，无法开启跟随")
+                self.sig_follow_result.emit(False)
                 return
             if time_interval_ms <= 0:
                 time_interval_ms = 20
             self.if_running_follow = True
             self.timer_follow.start(time_interval_ms)
+            self.sig_follow_result.emit(True)
+
             Logger.instance().info("主从跟随开启")
 
         @Slot()
@@ -207,6 +224,7 @@ class SlaveRobotThread(QObject):
             """停止跟随"""
             self.if_running_follow = False
             self.timer_follow.stop()
+            self.sig_follow_result.emit(False)
 
             Logger.instance().info("🛑 主从跟随关闭")
 

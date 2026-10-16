@@ -7,11 +7,10 @@ from PySide6.QtCore import QThread, Signal, QTimer, QSignalBlocker
 from src.ui.main_window import Ui_MainWindow
 from src.ui.settings_dialog import SettingsDialog
 from src.ui.log_stream import Logger
-from src.devices.robot_factory import create_slave_arm
+from src.devices.drivers_factory import create_slave_arm, create_master_arm, create_hand
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
 from src.threads.hand_thread import HandThread
-from src.devices.drivers.gello_arm import GelloArm
 from serial.tools import list_ports
 from src.shared_data.robot_share_data import RobotSharedMemory
 from src.devices.drivers.Link_hand import LinkHand
@@ -112,6 +111,7 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_refresh_hand_connect_info.clicked.connect(self.on_pushButton_refresh_hand_connect_info_clicked)
         self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
 
+  
         #test
         self.ui.pushButton_test_hand.clicked.connect(self.on_pushButton_test_hand_clicked)
 
@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
 #region===================hand thread=========================
     def init_hand_thread(self):
         self.hand_thread = QThread()
-        self.hand = LinkHand(name="LinkHand", hand_type="left", hand_joint="O6", modbus = "None",can="can0")
+        self.hand = create_hand("LinkHand")
         self.hand_worker = HandThread(self.hand, self.shared_robot_data)
         self.hand_worker.moveToThread(self.hand_thread)
 
@@ -234,15 +234,19 @@ class MainWindow(QMainWindow):
 #region================= 遥操作控制器 =================
 
     def on_pushButton_start_follow_clicked(self):
+        if self.if_master_connected is False or self.if_slave_connected is False:
+            Logger.instance().info("请先连接arm")
+            return
+        if self.if_slave_power_on is False:
+            Logger.instance().info("请先使能从手")
+            return
+
         if self.if_start_follow:
             self.sig_request_stop_follow.emit()
-            self.ui.pushButton_start_follow.setText("Start Follow")
-            self.if_start_follow = False
         else:
             time_interval_ms = int(self.ui.lineEdit_follow_rate.text())
             self.sig_request_start_follow.emit(time_interval_ms)
-            self.ui.pushButton_start_follow.setText("Stop Follow")
-            self.if_start_follow = True
+
 
     # 遥操作状态回调
     def on_teleop_state_changed(self, is_running):
@@ -251,13 +255,20 @@ class MainWindow(QMainWindow):
         else:
             self.ui.label.setText("Teleoperation: Stopped")
 
+    def on_follow_result(self, success):
+        if success:
+            self.ui.pushButton_start_follow.setText("Stop Follow")
+            self.if_start_follow = True
+        else:
+            self.if_start_follow = False
+            self.ui.pushButton_start_follow.setText("Start Follow")
 
 # endregion================= 遥操作控制器 =================
 
 
  #region================= master arm thread =====================
     def init_master_arm_thread(self):
-        self.master_arm = GelloArm(name="GelloArm", ids=[1, 2, 3, 4, 5, 6], port="/dev/ttyUSB0")
+        self.master_arm = create_master_arm("Gello", name="GelloArm", port="/dev/ttyUSB0")
 
         self.master_arm_thread = QThread()
         self.master_arm_worker = MasterRobotThread(self.master_arm, self.shared_robot_data)
@@ -307,7 +318,6 @@ class MainWindow(QMainWindow):
             self.sig_request_master_stop_read_pos.emit()  # Stop reading positions when connecting   
         else:
             self.ui.label.setText("Connecting...")
-            self.master_arm.ids = [1, 2, 3, 4, 5, 6, 7] # Update the IDs in the arm
             self.sig_request_master_connect.emit()
 
     def on_pushButton_refresh_master_port_clicked(self):
@@ -338,7 +348,7 @@ class MainWindow(QMainWindow):
         # 3. 实例化硬件
         robot_type = self.ui.comboBox_robot_type.currentText()
         arm = create_slave_arm(robot_type)
-
+        
         # ================= 核心：moveToThread 组装 =================
         self.slave_arm_thread = QThread()
         self.slave_arm_worker = SlaveRobotThread(arm, self.shared_robot_data, robot_type)
@@ -364,6 +374,7 @@ class MainWindow(QMainWindow):
         self.slave_arm_worker.sig_joint_positions.connect(self.on_joint_positions_updated)
         self.slave_arm_worker.sig_tcp_positions.connect(self.on_tcp_positions_updated)
         self.slave_arm_worker.sig_robot_type_result.connect(self.on_robot_type_result)
+        self.slave_arm_worker.sig_follow_result.connect(self.on_follow_result)
 
         #test
         self.sig_request_open_servoj.connect(self.slave_arm_worker.OpenServoJ)
