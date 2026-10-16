@@ -39,6 +39,25 @@ class SlaveState:
             name=self.name,
         )
 
+@dataclass
+class HandState:
+    """灵巧手整套状态：由独立线程更新"""
+    joints: List[float]          # 手指关节位置
+    name: str = ""               # 当前手设备名称，如 "LinkerO6"
+    # 后续扩展在这里追加字段，如：
+    # force: List[float]         # 各关节力/力矩
+    # tactile: List[float]       # 触觉
+    # temperature: float = 0.0
+    # error_code: int = 0
+
+    def snapshot(self):
+        """手动拷贝，生成独立快照"""
+        return HandState(
+            joints=self.joints.copy(),
+            name=self.name,
+        )
+
+    
 
 @dataclass
 class SlaveIncrementState:
@@ -99,3 +118,9 @@ class RobotSharedMemory:
             delta_joints=[]
         )
         self.slave_increment = SharedStateContainer(init_slave_inc)
+
+        #hand 状态
+        init_hand = HandState(
+            joints=[]
+        )
+        self.hand = HandState(init_hand)

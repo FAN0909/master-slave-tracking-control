@@ -18,8 +18,7 @@ from src.devices.drivers.Link_hand import LinkHand
 class MainWindow(QMainWindow):
 
     #define signals to request actions in the worker thread slave_arm_worker
-    sig_request_connect = Signal(str)
-    sig_request_robot_type = Signal(str)
+    sig_request_connect = Signal(str, str)
     sig_request_disconnect = Signal()
     sig_request_enable = Signal()
     sig_request_disable = Signal()
@@ -52,7 +51,8 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.settings_dialog = SettingsDialog(self)
+        self.shared_robot_data = RobotSharedMemory()
+        self.settings_dialog = SettingsDialog(self.shared_robot_data, self)
         self.init_log_window()
 
         self.if_master_connected = False
@@ -62,10 +62,10 @@ class MainWindow(QMainWindow):
 
         self.if_start_follow = False
 
-        self.shared_robot_data = RobotSharedMemory()
+        self.init_ui_state()
 
         self.init_thread()
-        self.init_ui_state()
+
 
     def init_log_window(self):
         self.logger = Logger.instance()
@@ -105,12 +105,10 @@ class MainWindow(QMainWindow):
 
         #Bind button click command start/stop follow
         self.ui.pushButton_start_follow.clicked.connect(self.on_pushButton_start_follow_clicked)
-        self.ui.comboBox_robot_type.currentTextChanged.connect(self.on_robot_type_changed)
 
         #Bind button click command hand
         self.ui.pushButton_refresh_hand_connect_info.clicked.connect(self.on_pushButton_refresh_hand_connect_info_clicked)
         self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
-
   
         #test
         self.ui.pushButton_test_hand.clicked.connect(self.on_pushButton_test_hand_clicked)
@@ -226,7 +224,7 @@ class MainWindow(QMainWindow):
             self.sig_request_hand_connect.emit()
 
     def on_pushButton_test_hand_clicked(self):
-        self.sig_request_hand_set_joint_positions.emit([255, 255, 255, 255, 255, 255])
+        self.sig_request_hand_set_joint_positions.emit([0, 255, 255, 255, 255, 255])
 
 #endregion===================hand thread=========================
 
@@ -356,8 +354,7 @@ class MainWindow(QMainWindow):
         # ==========================================================
 
         # 4. 将 MainWindow 的请求信号 -> 连接到 Worker 的槽函数
-        self.sig_request_connect.connect(self.slave_arm_worker.Connect)
-        self.sig_request_robot_type.connect(self.slave_arm_worker.ChangeRobotType)
+        self.sig_request_connect.connect(self.slave_arm_worker.ConnectRobot)
         self.sig_request_disconnect.connect(self.slave_arm_worker.Disconnect)
         self.sig_request_enable.connect(self.slave_arm_worker.Enable)
         self.sig_request_disable.connect(self.slave_arm_worker.Disable)
@@ -384,17 +381,10 @@ class MainWindow(QMainWindow):
 
         self.slave_arm_thread.start()
 
-    def on_robot_type_changed(self, robot_type):
-        self.ui.comboBox_robot_type.setEnabled(False)
-        self.ui.Btn_robot_connect.setEnabled(False)
-        self.sig_request_robot_type.emit(robot_type)
-
     def on_robot_type_result(self, success, robot_type, message):
         # 失败时恢复实际型号，避免再次触发切换信号。
         with QSignalBlocker(self.ui.comboBox_robot_type):
             self.ui.comboBox_robot_type.setCurrentText(robot_type)
-        self.ui.comboBox_robot_type.setEnabled(True)
-        self.ui.Btn_robot_connect.setEnabled(True)
         self.ui.label.setText(message)
         if success:
             self.if_slave_power_on = False
@@ -416,7 +406,10 @@ class MainWindow(QMainWindow):
             if not IP_address:
                 self.ui.label.setText("Please enter a valid IP address")
                 return
-            self.sig_request_connect.emit(IP_address)
+            robot_type = self.ui.comboBox_robot_type.currentText().strip()
+            self.ui.Btn_robot_connect.setEnabled(False)
+            self.ui.comboBox_robot_type.setEnabled(False)
+            self.sig_request_connect.emit(robot_type, IP_address)
 
     def on_pushButton_robot_PowerOn_clicked(self):
         if not self.if_slave_connected:
@@ -466,6 +459,8 @@ class MainWindow(QMainWindow):
     # region ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 
     def on_connect_result(self, success, msg):
+        self.ui.Btn_robot_connect.setEnabled(True)
+        self.ui.comboBox_robot_type.setEnabled(True)
         if success:
             self.if_slave_connected = True
             self.ui.Btn_robot_connect.setText("Disconnect")

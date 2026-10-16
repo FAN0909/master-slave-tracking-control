@@ -17,8 +17,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QSizePolicy, QSpacerItem,
-    QTabWidget, QVBoxLayout, QWidget)
+    QLineEdit, QListWidget, QListWidgetItem, QPushButton,
+    QSizePolicy, QSpacerItem, QTabWidget, QVBoxLayout,
+    QWidget)
 
 class Ui_SettingsDialog(object):
     def setupUi(self, SettingsDialog):
@@ -81,7 +82,7 @@ class Ui_SettingsDialog(object):
 
         self.pushButton_save_slave_param = QPushButton(self.groupBox_2)
         self.pushButton_save_slave_param.setObjectName(u"pushButton_save_slave_param")
-        self.pushButton_save_slave_param.setGeometry(QRect(90, 180, 95, 25))
+        self.pushButton_save_slave_param.setGeometry(QRect(280, 400, 95, 25))
 
         self.horizontalLayout.addWidget(self.groupBox_2)
 
@@ -107,14 +108,18 @@ class Ui_SettingsDialog(object):
         self.tab_handset.setObjectName(u"tab_handset")
         self.verticalLayout_hand = QVBoxLayout(self.tab_handset)
         self.verticalLayout_hand.setObjectName(u"verticalLayout_hand")
-        self.label_hand = QLabel(self.tab_handset)
-        self.label_hand.setObjectName(u"label_hand")
+        self.groupBox_3 = QGroupBox(self.tab_handset)
+        self.groupBox_3.setObjectName(u"groupBox_3")
+        self.listWidget_hand_actions = QListWidget(self.groupBox_3)
+        QListWidgetItem(self.listWidget_hand_actions)
+        QListWidgetItem(self.listWidget_hand_actions)
+        QListWidgetItem(self.listWidget_hand_actions)
+        QListWidgetItem(self.listWidget_hand_actions)
+        QListWidgetItem(self.listWidget_hand_actions)
+        self.listWidget_hand_actions.setObjectName(u"listWidget_hand_actions")
+        self.listWidget_hand_actions.setGeometry(QRect(10, 40, 621, 221))
 
-        self.verticalLayout_hand.addWidget(self.label_hand)
-
-        self.spacer_hand = QSpacerItem(20, 200, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.verticalLayout_hand.addItem(self.spacer_hand)
+        self.verticalLayout_hand.addWidget(self.groupBox_3)
 
         self.tabWidget_settings.addTab(self.tab_handset, "")
 
@@ -129,7 +134,7 @@ class Ui_SettingsDialog(object):
 
         self.retranslateUi(SettingsDialog)
 
-        self.tabWidget_settings.setCurrentIndex(0)
+        self.tabWidget_settings.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(SettingsDialog)
@@ -149,7 +154,22 @@ class Ui_SettingsDialog(object):
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_robotset), QCoreApplication.translate("SettingsDialog", u"Robot Set", None))
         self.label_camera.setText(QCoreApplication.translate("SettingsDialog", u"\u76f8\u673a\u8bbe\u7f6e", None))
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_cameraset), QCoreApplication.translate("SettingsDialog", u"Camera Set", None))
-        self.label_hand.setText(QCoreApplication.translate("SettingsDialog", u"\u7075\u5de7\u624b\u8bbe\u7f6e", None))
+        self.groupBox_3.setTitle(QCoreApplication.translate("SettingsDialog", u"Actions", None))
+
+        __sortingEnabled = self.listWidget_hand_actions.isSortingEnabled()
+        self.listWidget_hand_actions.setSortingEnabled(False)
+        ___qlistwidgetitem = self.listWidget_hand_actions.item(0)
+        ___qlistwidgetitem.setText(QCoreApplication.translate("SettingsDialog", u"1", None))
+        ___qlistwidgetitem1 = self.listWidget_hand_actions.item(1)
+        ___qlistwidgetitem1.setText(QCoreApplication.translate("SettingsDialog", u"2", None))
+        ___qlistwidgetitem2 = self.listWidget_hand_actions.item(2)
+        ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsDialog", u"3", None))
+        ___qlistwidgetitem3 = self.listWidget_hand_actions.item(3)
+        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsDialog", u"4", None))
+        ___qlistwidgetitem4 = self.listWidget_hand_actions.item(4)
+        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsDialog", u"5", None))
+        self.listWidget_hand_actions.setSortingEnabled(__sortingEnabled)
+
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_handset), QCoreApplication.translate("SettingsDialog", u"Hand Set", None))
     # retranslateUi
 

@@ -57,14 +57,14 @@ class SlaveRobotThread(QObject):
                 message = "请先停止跟随并断开从手，再切换型号"
                 Logger.instance().error(message)
                 self.sig_robot_type_result.emit(False, self.robot_type, message)
-                return
+                return False
             try:
                 new_arm = create_slave_arm(robot_type)
             except Exception as error:
                 message = str(error)
                 Logger.instance().error(message)
                 self.sig_robot_type_result.emit(False, self.robot_type, message)
-                return
+                return False
 
             self.StopTimer()
             self.timer_follow.stop()
@@ -79,6 +79,18 @@ class SlaveRobotThread(QObject):
             message = f"从手已切换为 {robot_type}，请重新连接"
             Logger.instance().info(message)
             self.sig_robot_type_result.emit(True, robot_type, message)
+            return True
+
+        @Slot(str, str)
+        def ConnectRobot(self, robot_type, ip_address):
+            if self.if_connected or self.if_running_follow:
+                self.sig_connect_result.emit(False, "请先停止跟随并断开从手，再连接设备")
+                return False
+            if robot_type != self.robot_type:
+                if not self.ChangeRobotType(robot_type):
+                    self.sig_connect_result.emit(False, f"切换从手型号 {robot_type} 失败")
+                    return False
+            return self.Connect(ip_address)
 
 
         @Slot(int)
