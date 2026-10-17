@@ -1,7 +1,6 @@
 from src.ui.log_stream import Logger
 
 from PySide6.QtCore import QObject, Signal, Slot, QTimer, Qt
-from src.devices.base.base_robotArm import BaseRobotArm
 from src.devices.drivers_factory import create_slave_arm
 from src.shared_data.robot_share_data import RobotSharedMemory
 from src.controller.teleop_controller import MasterSlaveTeleopCalculator
@@ -13,16 +12,12 @@ class SlaveRobotThread(QObject):
         sig_disable_result = Signal(bool, str)
         sig_joint_positions = Signal(list)
         sig_tcp_positions = Signal(list)
-        sig_robot_type_result = Signal(bool, str, str)
-
         sig_follow_result = Signal(bool)
 
-        def __init__(self, arm: BaseRobotArm, shared_data: RobotSharedMemory, robot_type="NRC"):
+        def __init__(self, shared_data: RobotSharedMemory):
             super().__init__()
-            self.arm = arm
-            self.robot_type = robot_type
+            self.arm = None
             self.shared_data = shared_data
-            self.reset_shared_positions()
             self.if_connected = False
             self.if_power_on = False
             self.if_servoj_open = False
@@ -51,45 +46,25 @@ class SlaveRobotThread(QObject):
                 delta_joints=[0.0] * self.arm.MAX_JOINT_COUNT,
             )
 
-        @Slot(str)
-        def ChangeRobotType(self, robot_type):
-            if self.if_connected or self.if_running_follow:
-                message = "请先停止跟随并断开从手，再切换型号"
-                Logger.instance().error(message)
-                self.sig_robot_type_result.emit(False, self.robot_type, message)
-                return False
-            try:
-                new_arm = create_slave_arm(robot_type)
-            except Exception as error:
-                message = str(error)
-                Logger.instance().error(message)
-                self.sig_robot_type_result.emit(False, self.robot_type, message)
-                return False
-
-            self.StopTimer()
-            self.timer_follow.stop()
-            self.arm = new_arm
-            self.robot_type = robot_type
-            self.if_power_on = False
-            self.if_servoj_open = False
-            self.servo_target_positions = None
-            self._resume_read_timer_interval = None
-            self.teleop_controller = MasterSlaveTeleopCalculator(self.shared_data)
-            self.reset_shared_positions()
-            message = f"从手已切换为 {robot_type}，请重新连接"
-            Logger.instance().info(message)
-            self.sig_robot_type_result.emit(True, robot_type, message)
-            return True
-
         @Slot(str, str)
         def ConnectRobot(self, robot_type, ip_address):
             if self.if_connected or self.if_running_follow:
                 self.sig_connect_result.emit(False, "请先停止跟随并断开从手，再连接设备")
                 return False
-            if robot_type != self.robot_type:
-                if not self.ChangeRobotType(robot_type):
-                    self.sig_connect_result.emit(False, f"切换从手型号 {robot_type} 失败")
-                    return False
+
+            try:
+                self.arm = create_slave_arm(robot_type)
+            except Exception as error:
+                message = str(error)
+                Logger.instance().error(message)
+                self.sig_connect_result.emit(False, message)
+                return False
+
+            self.if_power_on = False
+            self.if_servoj_open = False
+            self.servo_target_positions = None
+            self._resume_read_timer_interval = None
+            self.reset_shared_positions()
             return self.Connect(ip_address)
 
 

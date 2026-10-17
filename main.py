@@ -2,12 +2,12 @@ import sys
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLineEdit
-from PySide6.QtCore import QThread, Signal, QTimer, QSignalBlocker
+from PySide6.QtCore import QThread, Signal, QTimer
 
 from src.ui.main_window import Ui_MainWindow
 from src.ui.settings_dialog import SettingsDialog
 from src.ui.log_stream import Logger
-from src.devices.drivers_factory import create_slave_arm, create_master_arm, create_hand
+from src.devices.drivers_factory import create_master_arm, create_hand
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
 from src.threads.hand_thread import HandThread
@@ -343,13 +343,9 @@ class MainWindow(QMainWindow):
 
  #region================= slave arm thread =====================
     def init_slave_arm_thread(self):
-        # 3. 实例化硬件
-        robot_type = self.ui.comboBox_robot_type.currentText()
-        arm = create_slave_arm(robot_type)
-        
         # ================= 核心：moveToThread 组装 =================
         self.slave_arm_thread = QThread()
-        self.slave_arm_worker = SlaveRobotThread(arm, self.shared_robot_data, robot_type)
+        self.slave_arm_worker = SlaveRobotThread(self.shared_robot_data)
         self.slave_arm_worker.moveToThread(self.slave_arm_thread)
         # ==========================================================
 
@@ -370,7 +366,6 @@ class MainWindow(QMainWindow):
         self.slave_arm_worker.sig_disable_result.connect(self.on_disable_result)
         self.slave_arm_worker.sig_joint_positions.connect(self.on_joint_positions_updated)
         self.slave_arm_worker.sig_tcp_positions.connect(self.on_tcp_positions_updated)
-        self.slave_arm_worker.sig_robot_type_result.connect(self.on_robot_type_result)
         self.slave_arm_worker.sig_follow_result.connect(self.on_follow_result)
 
         #test
@@ -380,19 +375,6 @@ class MainWindow(QMainWindow):
         self.sig_request_movej.connect(self.slave_arm_worker.MoveJ)
 
         self.slave_arm_thread.start()
-
-    def on_robot_type_result(self, success, robot_type, message):
-        # 失败时恢复实际型号，避免再次触发切换信号。
-        with QSignalBlocker(self.ui.comboBox_robot_type):
-            self.ui.comboBox_robot_type.setCurrentText(robot_type)
-        self.ui.label.setText(message)
-        if success:
-            self.if_slave_power_on = False
-            self.if_start_follow = False
-            self.ui.pushButton_robot_PowerOn.setText("PowerOn")
-            self.ui.pushButton_start_follow.setText("Start Follow")
-            for suffix in [f"joint{i}" for i in range(7)] + ["x", "y", "z", "a", "b", "c"]:
-                getattr(self.ui, f"lineEdit_slave_{suffix}").clear()
 
     def on_Btn_robot_connect_clicked(self):
         if self.if_slave_connected:
