@@ -7,7 +7,7 @@ from PySide6.QtCore import QThread, Signal, QTimer
 from src.ui.main_window import Ui_MainWindow
 from src.ui.settings_dialog import SettingsDialog
 from src.ui.log_stream import Logger
-from src.devices.drivers_factory import create_master_arm, create_hand
+from src.devices.drivers_factory import create_master_arm
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
 from src.threads.hand_thread import HandThread
@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
     sig_request_master_stop_read_pos = Signal()
 
     #define signals to request actions in the hand thread
-    sig_request_hand_connect = Signal()
+    sig_request_hand_connect = Signal(str, str, str, str)
     sig_request_hand_disconnect = Signal()
     sig_request_hand_set_joint_positions = Signal(list)
     sig_request_hand_set_speed = Signal(list)
@@ -132,12 +132,11 @@ class MainWindow(QMainWindow):
 #region===================hand thread=========================
     def init_hand_thread(self):
         self.hand_thread = QThread()
-        self.hand = create_hand("LinkHand")
-        self.hand_worker = HandThread(self.hand, self.shared_robot_data)
+        self.hand_worker = HandThread(self.shared_robot_data)
         self.hand_worker.moveToThread(self.hand_thread)
 
         # Connect signals to the worker's slots
-        self.sig_request_hand_connect.connect(self.hand_worker.Connect)
+        self.sig_request_hand_connect.connect(self.hand_worker.ConnectHand)
         self.sig_request_hand_disconnect.connect(self.hand_worker.Disconnect)
         self.sig_request_hand_set_joint_positions.connect(self.hand_worker.Set_joint_positions)
         self.sig_request_hand_set_speed.connect(self.hand_worker.Set_speed)
@@ -149,12 +148,17 @@ class MainWindow(QMainWindow):
         self.hand_thread.start()
 
     def on_hand_connect_result(self, success, msg):
+        self.ui.pushButton_connect_hand.setEnabled(True)
+        self.ui.comboBox_hand_model.setEnabled(True)
+        self.ui.comboBox_hand_type.setEnabled(True)
+        self.ui.comboBox_hand_comm_type.setEnabled(True)
+        self.ui.comboBox_hand_comm_info.setEnabled(True)
         if success:
-            Logger.instance().info(f"[LinkHand] connected successfully")
+            Logger.instance().info(msg)
             self.ui.pushButton_connect_hand.setText("Disconnect")
             self.if_hand_connected = True   
         else:
-            Logger.instance().error(f"[LinkHand] failed to connect: {msg}")
+            Logger.instance().error(msg)
 
     def on_hand_disconnect_result(self, success, msg):
         if success:
@@ -206,22 +210,14 @@ class MainWindow(QMainWindow):
             hand_comm_type = self.ui.comboBox_hand_comm_type.currentText().strip()
             hand_comm_info = self.ui.comboBox_hand_comm_info.currentText().strip()
 
-            if hand_model == "LinkerO6":
-                self.hand.hand_joint = "O6"
-
-            if hand_type_ == "Right Hand":
-                self.hand.hand_type = "right"
-            if hand_type_ == "Left Hand":
-                self.hand.hand_type = "left"
-
-            if hand_comm_type.lower() in ("modbus", "modebus"):
-                self.hand.modbus = hand_comm_info
-                self.hand.can = "can0"  # Default CAN interface when using Modbus
-            elif hand_comm_type.lower() == "can":
-                self.hand.can = hand_comm_info
-                self.hand.modbus = "None"  # Default Modbus when using CAN
-
-            self.sig_request_hand_connect.emit()
+            self.ui.pushButton_connect_hand.setEnabled(False)
+            self.ui.comboBox_hand_model.setEnabled(False)
+            self.ui.comboBox_hand_type.setEnabled(False)
+            self.ui.comboBox_hand_comm_type.setEnabled(False)
+            self.ui.comboBox_hand_comm_info.setEnabled(False)
+            self.sig_request_hand_connect.emit(
+                hand_model, hand_type_, hand_comm_type, hand_comm_info
+            )
 
     def on_pushButton_test_hand_clicked(self):
         self.sig_request_hand_set_joint_positions.emit([0, 255, 255, 255, 255, 255])

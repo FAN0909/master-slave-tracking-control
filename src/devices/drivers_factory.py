@@ -6,7 +6,10 @@ from src.devices.drivers.Link_hand import LinkHand
 # 新增型号时，在对应字典中注册驱动类。
 ROBOT_DRIVERS = {"NRC": NrcArm}
 MASTER_DRIVERS = {"Gello": GelloArm}
-HAND_DRIVERS = {"LinkHand": LinkHand}
+HAND_DRIVERS = {
+    "LinkHand": LinkHand,
+    "LinkerO6": LinkHand,
+}
 CAMERA_DRIVERS = {}
 
 
