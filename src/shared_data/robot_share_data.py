@@ -123,4 +123,4 @@ class RobotSharedMemory:
         init_hand = HandState(
             joints=[]
         )
-        self.hand = HandState(init_hand)
+        self.hand = SharedStateContainer(init_hand)

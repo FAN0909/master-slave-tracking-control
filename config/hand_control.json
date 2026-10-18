@@ -1,26 +1,57 @@
 {
   "LinkerO6": {
     "joint_count": 6,
-    "joint_names": ["thumb", "index", "middle", "ring", "pinky", "palm"],
-    "position_range": { "min": 0, "max": 255 },
+    "joint_names": [
+      "thumb",
+      "palm",
+      "index",
+      "middle",
+      "ring",
+      "pinky"
+    ],
+    "position_range": {
+      "min": 0,
+      "max": 255
+    },
     "default_speed": 255,
     "default_force": 255,
     "actions": {
       "open": {
         "description": "完全张开",
-        "positions": [255, 255, 255, 255, 255, 255],
+        "positions": [
+          255,
+          255,
+          255,
+          255,
+          255,
+          255
+        ],
         "speed": 255,
         "force": 255
       },
       "close": {
         "description": "完全握拳",
-        "positions": [0, 0, 0, 0, 0, 0],
+        "positions": [
+          111,
+          111,
+          0,
+          0,
+          0,
+          0
+        ],
         "speed": 255,
         "force": 255
       },
       "middle_flex": {
         "description": "中指弯曲",
-        "positions": [0, 0, 200, 200, 200, 300],
+        "positions": [
+          0,
+          0,
+          200,
+          200,
+          200,
+          300
+        ],
         "speed": 255,
         "force": 255
       }

@@ -41,6 +41,7 @@ class HandThread(QObject):
         if self.hand.Connect():
             Logger.instance().info(f"[{self.hand.name}] connected successfully")
             self.if_connected = True
+            self.shared_data.hand.update_partial(name=hand_model)
             self.sig_connect_result.emit(True, f"[{self.hand.name}] connected successfully")
             return True
         else:
@@ -56,6 +57,7 @@ class HandThread(QObject):
         if self.hand.Disconnect():
             Logger.instance().info(f"[{self.hand.name}] disconnected successfully")
             self.if_connected = False
+            self.shared_data.hand.update_partial(name="", joints=[])
             self.sig_disconnect_result.emit(True, f"[{self.hand.name}] disconnected successfully")
             return True
         else:
