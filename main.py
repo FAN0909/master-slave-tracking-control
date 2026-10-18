@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_test_hand.clicked.connect(self.on_pushButton_test_hand_clicked)
 
     def show_settings(self):
-        self.settings_dialog.refresh_hand_actions()
+        self.settings_dialog.refresh_hand_actions(prefer_connected=True)
         self.settings_dialog.show()
         self.settings_dialog.raise_()
         self.settings_dialog.activateWindow()
@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
             Logger.instance().info(msg)
             self.ui.pushButton_connect_hand.setText("Disconnect")
             self.if_hand_connected = True
-            self.settings_dialog.refresh_hand_actions()
+            self.settings_dialog.refresh_hand_actions(prefer_connected=True)
         else:
             Logger.instance().error(msg)
 
@@ -167,7 +167,6 @@ class MainWindow(QMainWindow):
             Logger.instance().info(f"[LinkHand] disconnected successfully")
             self.ui.pushButton_connect_hand.setText("Connect")
             self.if_hand_connected = False
-            self.settings_dialog.refresh_hand_actions()
         else:
             Logger.instance().error(f"[LinkHand] failed to disconnect: {msg}")
 

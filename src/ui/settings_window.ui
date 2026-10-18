@@ -156,6 +156,20 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_hand_actions">
           <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_hand_model">
+            <item>
+             <widget class="QLabel" name="label_hand_model_settings">
+              <property name="text">
+               <string>型号</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBox_hand_model_settings"/>
+            </item>
+           </layout>
+          </item>
+          <item>
            <widget class="QTableWidget" name="tableWidget_hand_actions">
             <column>
              <property name="text">

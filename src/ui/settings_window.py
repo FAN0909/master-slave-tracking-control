@@ -15,11 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractButton, QApplication, QDialog, QDialogButtonBox,
-    QFormLayout, QGroupBox, QHBoxLayout, QHeaderView,
-    QLabel, QLineEdit, QPushButton, QSizePolicy,
-    QSpacerItem, QTabWidget, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
+    QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout,
+    QHeaderView, QLabel, QLineEdit, QPushButton,
+    QSizePolicy, QSpacerItem, QTabWidget, QTableWidget,
+    QTableWidgetItem, QVBoxLayout, QWidget)
 
 class Ui_SettingsDialog(object):
     def setupUi(self, SettingsDialog):
@@ -112,6 +112,21 @@ class Ui_SettingsDialog(object):
         self.groupBox_3.setObjectName(u"groupBox_3")
         self.verticalLayout_hand_actions = QVBoxLayout(self.groupBox_3)
         self.verticalLayout_hand_actions.setObjectName(u"verticalLayout_hand_actions")
+        self.horizontalLayout_hand_model = QHBoxLayout()
+        self.horizontalLayout_hand_model.setObjectName(u"horizontalLayout_hand_model")
+        self.label_hand_model_settings = QLabel(self.groupBox_3)
+        self.label_hand_model_settings.setObjectName(u"label_hand_model_settings")
+
+        self.horizontalLayout_hand_model.addWidget(self.label_hand_model_settings)
+
+        self.comboBox_hand_model_settings = QComboBox(self.groupBox_3)
+        self.comboBox_hand_model_settings.setObjectName(u"comboBox_hand_model_settings")
+
+        self.horizontalLayout_hand_model.addWidget(self.comboBox_hand_model_settings)
+
+
+        self.verticalLayout_hand_actions.addLayout(self.horizontalLayout_hand_model)
+
         self.tableWidget_hand_actions = QTableWidget(self.groupBox_3)
         if (self.tableWidget_hand_actions.columnCount() < 1):
             self.tableWidget_hand_actions.setColumnCount(1)
@@ -182,6 +197,7 @@ class Ui_SettingsDialog(object):
         self.label_camera.setText(QCoreApplication.translate("SettingsDialog", u"\u76f8\u673a\u8bbe\u7f6e", None))
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_cameraset), QCoreApplication.translate("SettingsDialog", u"Camera Set", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("SettingsDialog", u"Actions", None))
+        self.label_hand_model_settings.setText(QCoreApplication.translate("SettingsDialog", u"\u578b\u53f7", None))
         ___qtablewidgetitem = self.tableWidget_hand_actions.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("SettingsDialog", u"\u52a8\u4f5c\u540d\u79f0", None))
         self.pushButton_add_hand_actions.setText(QCoreApplication.translate("SettingsDialog", u"Add", None))

@@ -2,8 +2,8 @@ import json
 import math
 from pathlib import Path
 
-from PySide6.QtCore import QIODevice, QSaveFile, Qt
-from PySide6.QtWidgets import QAbstractItemView, QDialog, QHeaderView, QInputDialog, QTableWidgetItem
+from PySide6.QtCore import QIODevice, QSaveFile, QSignalBlocker, Qt
+from PySide6.QtWidgets import QAbstractItemView, QDialog, QHeaderView, QInputDialog, QMessageBox, QTableWidgetItem
 
 from src.ui.log_stream import Logger
 from src.ui.settings_window import Ui_SettingsDialog
@@ -24,6 +24,7 @@ class SettingsDialog(QDialog):
         self._displayed_hand_model = None
         self._loaded_action_names = ()
         self._default_hand_position = 0
+        self._saved_table_snapshot = ()
 
         self.init_ui()
 
@@ -41,6 +42,7 @@ class SettingsDialog(QDialog):
         table.verticalHeader().hide()
         table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         table.itemSelectionChanged.connect(self.update_delete_hand_action_button)
+        self.ui.comboBox_hand_model_settings.currentTextChanged.connect(self.on_hand_model_changed)
         self.refresh_hand_actions()
 
     def update_delete_hand_action_button(self):
@@ -49,24 +51,35 @@ class SettingsDialog(QDialog):
             self._displayed_hand_model is not None and bool(table.selectionModel().selectedRows())
         )
 
-    def refresh_hand_actions(self):
-        """根据当前已连接的灵巧手型号显示配置中的动作。"""
-        table = self.ui.tableWidget_hand_actions
-        table.setRowCount(0)
-        table.setColumnCount(1)
-        table.setHorizontalHeaderLabels(["动作名称"])
-        self._displayed_hand_model = None
-        self._loaded_action_names = ()
-        self.ui.pushButton_save_hand_actions.setEnabled(False)
-        self.ui.pushButton_add_hand_actions.setEnabled(False)
-        self.ui.pushButton_delete_hand_actions.setEnabled(False)
-        hand_model = self.shared_data.hand.read().name
-        if not hand_model:
-            return
+    def _read_hand_config(self):
+        with self.HAND_CONFIG_PATH.open(encoding="utf-8") as file:
+            config = json.load(file)
+        if not isinstance(config, dict):
+            raise ValueError("灵巧手配置必须是对象")
+        return config
 
+    def _table_snapshot(self):
+        table = self.ui.tableWidget_hand_actions
+        return tuple(
+            tuple(table.item(row, column).text() if table.item(row, column) else ""
+                  for column in range(table.columnCount()))
+            for row in range(table.rowCount())
+        )
+
+    def _confirm_pending_hand_changes(self):
+        if self._displayed_hand_model is None or self._table_snapshot() == self._saved_table_snapshot:
+            return True
+        choice = QMessageBox.question(
+            self, "未保存的动作", "当前动作有未保存的修改，是否先保存？",
+            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+        )
+        if choice == QMessageBox.StandardButton.Save:
+            return self.save_hand_actions()
+        return choice == QMessageBox.StandardButton.Discard
+
+    def _load_hand_actions(self, hand_model, config):
         try:
-            with self.HAND_CONFIG_PATH.open(encoding="utf-8") as file:
-                config = json.load(file)
             hand_config = config[hand_model]
             joint_names = hand_config["joint_names"]
             actions = hand_config["actions"]
@@ -81,8 +94,11 @@ class SettingsDialog(QDialog):
                     raise ValueError(f"动作 {action_name} 的 positions 数量与关节数量不一致")
         except (OSError, ValueError, KeyError, TypeError) as error:
             Logger.instance().error(f"读取 {hand_model} 灵巧手动作失败: {error}")
-            return
+            return False
 
+        table = self.ui.tableWidget_hand_actions
+        self._displayed_hand_model = None
+        table.setRowCount(0)
         table.setColumnCount(len(joint_names) + 1)
         table.setHorizontalHeaderLabels(["动作名称", *joint_names])
         table.setRowCount(len(actions))
@@ -95,12 +111,70 @@ class SettingsDialog(QDialog):
         self._displayed_hand_model = hand_model
         self._loaded_action_names = tuple(actions)
         self._default_hand_position = hand_config.get("position_range", {}).get("min", 0)
+        self._saved_table_snapshot = self._table_snapshot()
         self.ui.pushButton_save_hand_actions.setEnabled(True)
         self.ui.pushButton_add_hand_actions.setEnabled(True)
+        self.update_delete_hand_action_button()
+        return True
+
+    def refresh_hand_actions(self, prefer_connected=False):
+        """从配置刷新型号及动作；没有连接设备也可以查看。"""
+        if not self._confirm_pending_hand_changes():
+            return
+        try:
+            config = self._read_hand_config()
+        except (OSError, ValueError, TypeError) as error:
+            Logger.instance().error(f"读取灵巧手配置失败: {error}")
+            return
+
+        combo = self.ui.comboBox_hand_model_settings
+        connected_model = self.shared_data.hand.read().name
+        selected_model = combo.currentText()
+        hand_model = (
+            connected_model if prefer_connected and connected_model in config
+            else selected_model if selected_model in config
+            else self._displayed_hand_model if self._displayed_hand_model in config
+            else next(iter(config), None)
+        )
+        if hand_model is not None and not self._load_hand_actions(hand_model, config):
+            return
+        if hand_model is None:
+            self._displayed_hand_model = None
+            self._loaded_action_names = ()
+            self._saved_table_snapshot = ()
+            table = self.ui.tableWidget_hand_actions
+            table.setRowCount(0)
+            table.setColumnCount(1)
+            table.setHorizontalHeaderLabels(["动作名称"])
+            self.ui.pushButton_save_hand_actions.setEnabled(False)
+            self.ui.pushButton_add_hand_actions.setEnabled(False)
+            self.ui.pushButton_delete_hand_actions.setEnabled(False)
+        with QSignalBlocker(combo):
+            combo.clear()
+            combo.addItems(config.keys())
+            if hand_model is not None:
+                combo.setCurrentText(hand_model)
+
+    def on_hand_model_changed(self, hand_model):
+        if not hand_model or hand_model == self._displayed_hand_model:
+            return
+        previous_model = self._displayed_hand_model
+        if not self._confirm_pending_hand_changes():
+            with QSignalBlocker(self.ui.comboBox_hand_model_settings):
+                self.ui.comboBox_hand_model_settings.setCurrentText(previous_model or "")
+            return
+        try:
+            config = self._read_hand_config()
+        except (OSError, ValueError, TypeError) as error:
+            Logger.instance().error(f"读取灵巧手配置失败: {error}")
+            config = {}
+        if not self._load_hand_actions(hand_model, config):
+            with QSignalBlocker(self.ui.comboBox_hand_model_settings):
+                self.ui.comboBox_hand_model_settings.setCurrentText(previous_model or "")
 
     def add_hand_action(self):
         """向表格添加一个动作，等待 Save Actions 写入配置。"""
-        if self._displayed_hand_model != self.shared_data.hand.read().name:
+        if self._displayed_hand_model is None:
             return
         name, accepted = QInputDialog.getText(self, "添加动作", "动作名称：")
         if not accepted:
@@ -123,7 +197,7 @@ class SettingsDialog(QDialog):
 
     def delete_hand_actions(self):
         """从表格移除选中的动作，等待 Save Actions 写入配置。"""
-        if self._displayed_hand_model != self.shared_data.hand.read().name:
+        if self._displayed_hand_model is None:
             return
         table = self.ui.tableWidget_hand_actions
         for row in sorted((index.row() for index in table.selectionModel().selectedRows()), reverse=True):
@@ -131,10 +205,10 @@ class SettingsDialog(QDialog):
 
     def save_hand_actions(self):
         """把表格中的关节位置写回当前型号的动作配置。"""
-        hand_model = self.shared_data.hand.read().name
-        if not hand_model or hand_model != self._displayed_hand_model:
-            Logger.instance().error("灵巧手连接状态已变化，请重新打开设置后再保存动作")
-            return
+        hand_model = self._displayed_hand_model
+        if hand_model is None:
+            Logger.instance().error("请先选择灵巧手型号")
+            return False
 
         table = self.ui.tableWidget_hand_actions
         try:
@@ -184,10 +258,12 @@ class SettingsDialog(QDialog):
                 raise OSError(file.errorString())
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
             Logger.instance().error(f"灵巧手动作保存失败: {error}")
-            return
+            return False
 
+        self._loaded_action_names = tuple(updated_actions)
+        self._saved_table_snapshot = self._table_snapshot()
         Logger.instance().info(f"{hand_model} 灵巧手动作已保存")
-        self.refresh_hand_actions()
+        return True
 
     def save_slave_param(self):
         """读取当前从手参数并保存到配置文件。"""
