@@ -110,8 +110,10 @@ class Ui_SettingsDialog(object):
         self.verticalLayout_hand.setObjectName(u"verticalLayout_hand")
         self.groupBox_3 = QGroupBox(self.tab_handset)
         self.groupBox_3.setObjectName(u"groupBox_3")
-        self.verticalLayout_hand_actions = QVBoxLayout(self.groupBox_3)
-        self.verticalLayout_hand_actions.setObjectName(u"verticalLayout_hand_actions")
+        self.verticalLayout_5 = QVBoxLayout(self.groupBox_3)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.verticalLayout_3 = QVBoxLayout()
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.horizontalLayout_hand_model = QHBoxLayout()
         self.horizontalLayout_hand_model.setObjectName(u"horizontalLayout_hand_model")
         self.label_hand_model_settings = QLabel(self.groupBox_3)
@@ -125,7 +127,7 @@ class Ui_SettingsDialog(object):
         self.horizontalLayout_hand_model.addWidget(self.comboBox_hand_model_settings)
 
 
-        self.verticalLayout_hand_actions.addLayout(self.horizontalLayout_hand_model)
+        self.verticalLayout_3.addLayout(self.horizontalLayout_hand_model)
 
         self.tableWidget_hand_actions = QTableWidget(self.groupBox_3)
         if (self.tableWidget_hand_actions.columnCount() < 1):
@@ -134,7 +136,7 @@ class Ui_SettingsDialog(object):
         self.tableWidget_hand_actions.setHorizontalHeaderItem(0, __qtablewidgetitem)
         self.tableWidget_hand_actions.setObjectName(u"tableWidget_hand_actions")
 
-        self.verticalLayout_hand_actions.addWidget(self.tableWidget_hand_actions)
+        self.verticalLayout_3.addWidget(self.tableWidget_hand_actions)
 
         self.horizontalLayout_hand_actions = QHBoxLayout()
         self.horizontalLayout_hand_actions.setObjectName(u"horizontalLayout_hand_actions")
@@ -158,7 +160,42 @@ class Ui_SettingsDialog(object):
         self.horizontalLayout_hand_actions.addWidget(self.pushButton_save_hand_actions)
 
 
-        self.verticalLayout_hand_actions.addLayout(self.horizontalLayout_hand_actions)
+        self.verticalLayout_3.addLayout(self.horizontalLayout_hand_actions)
+
+
+        self.verticalLayout_5.addLayout(self.verticalLayout_3)
+
+        self.groupBox_4 = QGroupBox(self.groupBox_3)
+        self.groupBox_4.setObjectName(u"groupBox_4")
+        self.verticalLayout_4 = QVBoxLayout(self.groupBox_4)
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label_4 = QLabel(self.groupBox_4)
+        self.label_4.setObjectName(u"label_4")
+
+        self.horizontalLayout_2.addWidget(self.label_4)
+
+        self.comboBox_hand_current_close = QComboBox(self.groupBox_4)
+        self.comboBox_hand_current_close.setObjectName(u"comboBox_hand_current_close")
+
+        self.horizontalLayout_2.addWidget(self.comboBox_hand_current_close)
+
+        self.label_5 = QLabel(self.groupBox_4)
+        self.label_5.setObjectName(u"label_5")
+
+        self.horizontalLayout_2.addWidget(self.label_5)
+
+        self.comboBox_hand_current_open = QComboBox(self.groupBox_4)
+        self.comboBox_hand_current_open.setObjectName(u"comboBox_hand_current_open")
+
+        self.horizontalLayout_2.addWidget(self.comboBox_hand_current_open)
+
+
+        self.verticalLayout_4.addLayout(self.horizontalLayout_2)
+
+
+        self.verticalLayout_5.addWidget(self.groupBox_4)
 
 
         self.verticalLayout_hand.addWidget(self.groupBox_3)
@@ -203,6 +240,9 @@ class Ui_SettingsDialog(object):
         self.pushButton_add_hand_actions.setText(QCoreApplication.translate("SettingsDialog", u"Add", None))
         self.pushButton_delete_hand_actions.setText(QCoreApplication.translate("SettingsDialog", u"Delete", None))
         self.pushButton_save_hand_actions.setText(QCoreApplication.translate("SettingsDialog", u"Save Actions", None))
+        self.groupBox_4.setTitle(QCoreApplication.translate("SettingsDialog", u"Set Actions", None))
+        self.label_4.setText(QCoreApplication.translate("SettingsDialog", u"Close", None))
+        self.label_5.setText(QCoreApplication.translate("SettingsDialog", u"Open", None))
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_handset), QCoreApplication.translate("SettingsDialog", u"Hand Set", None))
     # retranslateUi
 

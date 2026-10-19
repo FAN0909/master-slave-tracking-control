@@ -15,6 +15,7 @@ class SettingsDialog(QDialog):
     HAND_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "hand_control.json"
 
     def __init__(self, shared_data: RobotSharedMemory, parent=None):
+        """创建界面并保存当前型号、动作列表和表格快照等编辑状态。"""
         super().__init__(parent)
         self.shared_data = shared_data
         self.ui = Ui_SettingsDialog()
@@ -29,6 +30,7 @@ class SettingsDialog(QDialog):
         self.init_ui()
 
     def init_ui(self):
+        """连接按钮和型号切换信号，并初始化动作表格。"""
         self.ui.pushButton_save_slave_param.clicked.connect(self.save_slave_param)
         self.ui.pushButton_save_hand_actions.clicked.connect(self.save_hand_actions)
         self.ui.pushButton_add_hand_actions.clicked.connect(self.add_hand_action)
@@ -38,7 +40,7 @@ class SettingsDialog(QDialog):
             QAbstractItemView.EditTrigger.DoubleClicked
             | QAbstractItemView.EditTrigger.EditKeyPressed
         )
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         table.verticalHeader().hide()
         table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         table.itemSelectionChanged.connect(self.update_delete_hand_action_button)
@@ -46,12 +48,14 @@ class SettingsDialog(QDialog):
         self.refresh_hand_actions()
 
     def update_delete_hand_action_button(self):
+        """只有选中动作行且已有显示型号时才允许删除。"""
         table = self.ui.tableWidget_hand_actions
         self.ui.pushButton_delete_hand_actions.setEnabled(
             self._displayed_hand_model is not None and bool(table.selectionModel().selectedRows())
         )
 
     def _read_hand_config(self):
+        """读取灵巧手配置，并确认顶层结构可按型号查找。"""
         with self.HAND_CONFIG_PATH.open(encoding="utf-8") as file:
             config = json.load(file)
         if not isinstance(config, dict):
@@ -59,6 +63,7 @@ class SettingsDialog(QDialog):
         return config
 
     def _table_snapshot(self):
+        """记录表格全部单元格文字，用于识别尚未保存的编辑。"""
         table = self.ui.tableWidget_hand_actions
         return tuple(
             tuple(table.item(row, column).text() if table.item(row, column) else ""
@@ -67,6 +72,7 @@ class SettingsDialog(QDialog):
         )
 
     def _confirm_pending_hand_changes(self):
+        """切换或刷新前处理未保存修改；取消时保留当前表格。"""
         if self._displayed_hand_model is None or self._table_snapshot() == self._saved_table_snapshot:
             return True
         choice = QMessageBox.question(
@@ -79,6 +85,7 @@ class SettingsDialog(QDialog):
         return choice == QMessageBox.StandardButton.Discard
 
     def _load_hand_actions(self, hand_model, config):
+        """校验指定型号的动作配置，再将位置、速度和力矩填入表格。"""
         try:
             hand_config = config[hand_model]
             joint_names = hand_config["joint_names"]
@@ -96,11 +103,12 @@ class SettingsDialog(QDialog):
             Logger.instance().error(f"读取 {hand_model} 灵巧手动作失败: {error}")
             return False
 
+        # 配置有效后再清空旧表格，避免读取失败时丢失正在查看的内容。
         table = self.ui.tableWidget_hand_actions
         self._displayed_hand_model = None
         table.setRowCount(0)
-        table.setColumnCount(len(joint_names) + 1)
-        table.setHorizontalHeaderLabels(["动作名称", *joint_names])
+        table.setColumnCount(len(joint_names) + 3)
+        table.setHorizontalHeaderLabels(["动作名称", *joint_names, "速度", "力矩"])
         table.setRowCount(len(actions))
         for row, (name, action) in enumerate(actions.items()):
             name_item = QTableWidgetItem(name)
@@ -108,9 +116,14 @@ class SettingsDialog(QDialog):
             table.setItem(row, 0, name_item)
             for column, position in enumerate(action["positions"], start=1):
                 table.setItem(row, column, QTableWidgetItem(str(position)))
+            table.setItem(row, len(joint_names) + 1, QTableWidgetItem(str(action.get("speed", hand_config.get("default_speed", 255)))))
+            table.setItem(row, len(joint_names) + 2, QTableWidgetItem(str(action.get("force", hand_config.get("default_force", 255)))))
+        # 保存加载时的动作名称和表格内容，后续用于检测外部修改和未保存编辑。
         self._displayed_hand_model = hand_model
         self._loaded_action_names = tuple(actions)
         self._default_hand_position = hand_config.get("position_range", {}).get("min", 0)
+        self._default_hand_speed = hand_config.get("default_speed", 255)
+        self._default_hand_force = hand_config.get("default_force", 255)
         self._saved_table_snapshot = self._table_snapshot()
         self.ui.pushButton_save_hand_actions.setEnabled(True)
         self.ui.pushButton_add_hand_actions.setEnabled(True)
@@ -130,6 +143,7 @@ class SettingsDialog(QDialog):
         combo = self.ui.comboBox_hand_model_settings
         connected_model = self.shared_data.hand.read().name
         selected_model = combo.currentText()
+        # 优先保留用户选中的型号；请求时才优先使用已连接的型号。
         hand_model = (
             connected_model if prefer_connected and connected_model in config
             else selected_model if selected_model in config
@@ -149,6 +163,7 @@ class SettingsDialog(QDialog):
             self.ui.pushButton_save_hand_actions.setEnabled(False)
             self.ui.pushButton_add_hand_actions.setEnabled(False)
             self.ui.pushButton_delete_hand_actions.setEnabled(False)
+        # 重建型号列表时阻止 currentTextChanged 重入加载流程。
         with QSignalBlocker(combo):
             combo.clear()
             combo.addItems(config.keys())
@@ -156,6 +171,7 @@ class SettingsDialog(QDialog):
                 combo.setCurrentText(hand_model)
 
     def on_hand_model_changed(self, hand_model):
+        """切换型号前确认未保存修改，失败时恢复之前的选择。"""
         if not hand_model or hand_model == self._displayed_hand_model:
             return
         previous_model = self._displayed_hand_model
@@ -186,13 +202,16 @@ class SettingsDialog(QDialog):
             Logger.instance().error("动作名称不能为空或与已有动作重复")
             return
 
+        # 新动作的关节位置、速度和力矩取当前型号的默认值。
         row = table.rowCount()
         table.insertRow(row)
         name_item = QTableWidgetItem(name)
         name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
         table.setItem(row, 0, name_item)
-        for column in range(1, table.columnCount()):
+        for column in range(1, table.columnCount() - 2):
             table.setItem(row, column, QTableWidgetItem(str(self._default_hand_position)))
+        table.setItem(row, table.columnCount() - 2, QTableWidgetItem(str(self._default_hand_speed)))
+        table.setItem(row, table.columnCount() - 1, QTableWidgetItem(str(self._default_hand_force)))
         table.selectRow(row)
 
     def delete_hand_actions(self):
@@ -200,11 +219,12 @@ class SettingsDialog(QDialog):
         if self._displayed_hand_model is None:
             return
         table = self.ui.tableWidget_hand_actions
+        # 倒序删除，避免行号移动影响后续选中行。
         for row in sorted((index.row() for index in table.selectionModel().selectedRows()), reverse=True):
             table.removeRow(row)
 
     def save_hand_actions(self):
-        """把表格中的关节位置写回当前型号的动作配置。"""
+        """把表格中的关节位置、速度和力矩写回当前型号的动作配置。"""
         hand_model = self._displayed_hand_model
         if hand_model is None:
             Logger.instance().error("请先选择灵巧手型号")
@@ -217,11 +237,13 @@ class SettingsDialog(QDialog):
             hand_config = config[hand_model]
             joint_names = hand_config["joint_names"]
             actions = hand_config["actions"]
-            if table.columnCount() != len(joint_names) + 1 or tuple(actions) != self._loaded_action_names:
+            # 保存前确认配置结构未被外部改动，避免用旧表格覆盖新的动作列表。
+            if table.columnCount() != len(joint_names) + 3 or tuple(actions) != self._loaded_action_names:
                 raise ValueError("配置中的动作或关节已变化，请重新打开设置")
             if [table.horizontalHeaderItem(i + 1).text() for i in range(len(joint_names))] != joint_names:
                 raise ValueError("关节名称已变化，请重新打开设置")
 
+            # 先验证并组装所有动作，全部通过后再一次性写入文件。
             updated_actions = {}
             for row in range(table.rowCount()):
                 name_item = table.item(row, 0)
@@ -236,6 +258,14 @@ class SettingsDialog(QDialog):
                         positions.append(int(value))
                     except ValueError as error:
                         raise ValueError(f"动作 {action_name} 的 {joint_name} 必须是整数") from error
+                action_params = {}
+                for offset, key, label in ((1, "speed", "速度"), (2, "force", "力矩")):
+                    item = table.item(row, len(joint_names) + offset)
+                    value = item.text().strip() if item else ""
+                    try:
+                        action_params[key] = int(value)
+                    except ValueError as error:
+                        raise ValueError(f"动作 {action_name} 的{label}必须是整数") from error
                 action = actions.get(action_name)
                 if action is None:
                     action = {
@@ -243,10 +273,11 @@ class SettingsDialog(QDialog):
                         "speed": hand_config.get("default_speed", 255),
                         "force": hand_config.get("default_force", 255),
                     }
-                updated_actions[action_name] = {**action, "positions": positions}
+                updated_actions[action_name] = {**action, "positions": positions, **action_params}
 
             hand_config["actions"] = updated_actions
             content = (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+            # QSaveFile 先写临时文件，提交成功后才替换原配置。
             file = QSaveFile(str(self.HAND_CONFIG_PATH))
             if not file.open(QIODevice.OpenModeFlag.WriteOnly):
                 raise OSError(file.errorString())
@@ -281,6 +312,7 @@ class SettingsDialog(QDialog):
             Logger.instance().error("从手速度、加速度、加加速度必须是有限的正数")
             return
 
+        # 只更新当前连接从手的三个运动参数，保留其他配置项。
         params = {
             "SERVO_J_VMAX": velocity,
             "SERVO_J_AVMAX": acceleration,
@@ -293,6 +325,7 @@ class SettingsDialog(QDialog):
                 raise ValueError(f"配置文件中没有 {slave_name} 的从手配置")
             config[slave_name].update(params)
             content = (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+            # 原子写入，避免写入失败时留下不完整的配置文件。
             file = QSaveFile(str(self.CONFIG_PATH))
             if not file.open(QIODevice.OpenModeFlag.WriteOnly):
                 raise OSError(file.errorString())
