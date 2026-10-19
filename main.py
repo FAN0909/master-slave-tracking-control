@@ -26,6 +26,7 @@ class MainWindow(QMainWindow):
     sig_request_stop_read_pos = Signal()
     sig_request_start_follow = Signal(int)
     sig_request_stop_follow = Signal()
+    sig_request_sync_hand_trigger = Signal()
 
     #define signals to request actions in the worker thread master_arm_worker
     sig_request_master_connect = Signal()
@@ -141,6 +142,7 @@ class MainWindow(QMainWindow):
         self.sig_request_hand_disconnect.connect(self.hand_worker.Disconnect)
         self.sig_request_hand_set_joint_positions.connect(self.hand_worker.Set_joint_positions)
         self.sig_request_hand_set_speed.connect(self.hand_worker.Set_speed)
+        self.slave_arm_worker.sig_hand_closed_changed.connect(self.hand_worker.ExecuteFollowState)
 
         # Connect the worker's signals to the main window's slots
         self.hand_worker.sig_connect_result.connect(self.on_hand_connect_result)
@@ -159,6 +161,8 @@ class MainWindow(QMainWindow):
             self.ui.pushButton_connect_hand.setText("Disconnect")
             self.if_hand_connected = True
             self.settings_dialog.refresh_hand_actions(prefer_connected=True)
+            if self.if_start_follow:
+                self.sig_request_sync_hand_trigger.emit()
         else:
             Logger.instance().error(msg)
 
@@ -235,6 +239,9 @@ class MainWindow(QMainWindow):
             return
         if self.if_slave_power_on is False:
             Logger.instance().info("请先使能从手")
+            return
+        if self.if_hand_connected is False:
+            Logger.instance().info("请连接hand")
             return
 
         if self.if_start_follow:
@@ -356,6 +363,7 @@ class MainWindow(QMainWindow):
         self.sig_request_stop_read_pos.connect(self.slave_arm_worker.StopTimer)
         self.sig_request_start_follow.connect(self.slave_arm_worker.StartFollow)
         self.sig_request_stop_follow.connect(self.slave_arm_worker.StopFollow)
+        self.sig_request_sync_hand_trigger.connect(self.slave_arm_worker.SyncHandTriggerState)
 
         # 5. 将 Worker 的结果信号 -> 连接到 MainWindow 的更新回调
         self.slave_arm_worker.sig_connect_result.connect(self.on_connect_result)

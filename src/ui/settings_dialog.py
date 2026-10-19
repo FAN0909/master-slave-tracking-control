@@ -26,6 +26,7 @@ class SettingsDialog(QDialog):
         self._loaded_action_names = ()
         self._default_hand_position = 0
         self._saved_table_snapshot = ()
+        self._saved_action_selection = ()
 
         self.init_ui()
 
@@ -89,9 +90,15 @@ class SettingsDialog(QDialog):
             for row in range(table.rowCount())
         )
 
+    def _action_selection(self):
+        return (self.ui.comboBox_hand_current_close.currentText(),
+                self.ui.comboBox_hand_current_open.currentText())
+
     def _confirm_pending_hand_changes(self):
         """切换或刷新前处理未保存修改；取消时保留当前表格。"""
-        if self._displayed_hand_model is None or self._table_snapshot() == self._saved_table_snapshot:
+        if (self._displayed_hand_model is None or
+                (self._table_snapshot() == self._saved_table_snapshot
+                 and self._action_selection() == self._saved_action_selection)):
             return True
         choice = QMessageBox.question(
             self, "未保存的动作", "当前动作有未保存的修改，是否先保存？",
@@ -147,6 +154,11 @@ class SettingsDialog(QDialog):
         self.ui.pushButton_add_hand_actions.setEnabled(True)
         self.update_delete_hand_action_button()
         self.refresh_hand_action_choices()
+        for combo, key in ((self.ui.comboBox_hand_current_close, "current_close"),
+                           (self.ui.comboBox_hand_current_open, "current_open")):
+            if hand_config.get(key) in actions:
+                combo.setCurrentText(hand_config[key])
+        self._saved_action_selection = self._action_selection()
         return True
 
     def refresh_hand_actions(self, prefer_connected=False):
@@ -175,6 +187,7 @@ class SettingsDialog(QDialog):
             self._displayed_hand_model = None
             self._loaded_action_names = ()
             self._saved_table_snapshot = ()
+            self._saved_action_selection = ()
             table = self.ui.tableWidget_hand_actions
             table.setRowCount(0)
             table.setColumnCount(1)
@@ -298,6 +311,11 @@ class SettingsDialog(QDialog):
                 updated_actions[action_name] = {**action, "positions": positions, **action_params}
 
             hand_config["actions"] = updated_actions
+            close_name, open_name = self._action_selection()
+            if close_name not in updated_actions or open_name not in updated_actions:
+                raise ValueError("请为 Close 和 Open 选择动作")
+            hand_config["current_close"] = close_name
+            hand_config["current_open"] = open_name
             content = (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
             # QSaveFile 先写临时文件，提交成功后才替换原配置。
             file = QSaveFile(str(self.HAND_CONFIG_PATH))
@@ -315,6 +333,7 @@ class SettingsDialog(QDialog):
 
         self._loaded_action_names = tuple(updated_actions)
         self._saved_table_snapshot = self._table_snapshot()
+        self._saved_action_selection = self._action_selection()
         Logger.instance().info(f"{hand_model} 灵巧手动作已保存")
         return True
 
