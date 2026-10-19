@@ -1,6 +1,7 @@
 from src.devices.drivers.nrc_arm import NrcArm
 from src.devices.drivers.gello_arm import GelloArm
 from src.devices.drivers.Link_hand import LinkHand
+from src.devices.drivers.camera_d435 import CameraD435
 
 
 # 新增型号时，在对应字典中注册驱动类。
@@ -10,7 +11,7 @@ HAND_DRIVERS = {
     "LinkHand": LinkHand,
     "LinkerO6": LinkHand,
 }
-CAMERA_DRIVERS = {}
+CAMERA_DRIVERS = {"D435": CameraD435}
 
 
 def create_slave_arm(robot_type, **kwargs):

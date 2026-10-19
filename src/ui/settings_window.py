@@ -169,6 +169,25 @@ class Ui_SettingsDialog(object):
 
         self.horizontalLayout_2.addWidget(self.comboBox_hand_current_open)
 
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
+
+        self.label_7 = QLabel(self.groupBox_3)
+        self.label_7.setObjectName(u"label_7")
+
+        self.horizontalLayout_2.addWidget(self.label_7)
+
+        self.comboBox_hand_actions_test = QComboBox(self.groupBox_3)
+        self.comboBox_hand_actions_test.setObjectName(u"comboBox_hand_actions_test")
+
+        self.horizontalLayout_2.addWidget(self.comboBox_hand_actions_test)
+
+        self.pushButton_hand_test = QPushButton(self.groupBox_3)
+        self.pushButton_hand_test.setObjectName(u"pushButton_hand_test")
+
+        self.horizontalLayout_2.addWidget(self.pushButton_hand_test)
+
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_2)
 
@@ -242,6 +261,8 @@ class Ui_SettingsDialog(object):
         self.label_6.setText(QCoreApplication.translate("SettingsDialog", u"Set Current Actions", None))
         self.label_4.setText(QCoreApplication.translate("SettingsDialog", u"Close", None))
         self.label_5.setText(QCoreApplication.translate("SettingsDialog", u"Open", None))
+        self.label_7.setText(QCoreApplication.translate("SettingsDialog", u"Action test", None))
+        self.pushButton_hand_test.setText(QCoreApplication.translate("SettingsDialog", u"test", None))
         self.pushButton_add_hand_actions.setText(QCoreApplication.translate("SettingsDialog", u"Add", None))
         self.pushButton_delete_hand_actions.setText(QCoreApplication.translate("SettingsDialog", u"Delete", None))
         self.pushButton_save_hand_actions.setText(QCoreApplication.translate("SettingsDialog", u"Save Actions", None))

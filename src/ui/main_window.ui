@@ -636,19 +636,6 @@
      </item>
     </layout>
    </widget>
-   <widget class="QPushButton" name="pushButton_test_hand">
-    <property name="geometry">
-     <rect>
-      <x>340</x>
-      <y>490</y>
-      <width>95</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>PushButton</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="label_37">
     <property name="geometry">
      <rect>

@@ -15,7 +15,7 @@
     },
     "default_speed": 255,
     "default_force": 255,
-    "current_close": "middle_flex",
+    "current_close": "close",
     "current_open": "open",
     "actions": {
       "open": {
@@ -40,19 +40,6 @@
           255,
           255,
           255
-        ],
-        "speed": 255,
-        "force": 255
-      },
-      "middle_flex": {
-        "description": "中指弯曲",
-        "positions": [
-          0,
-          0,
-          200,
-          200,
-          200,
-          300
         ],
         "speed": 255,
         "force": 255

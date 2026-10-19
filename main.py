@@ -112,7 +112,7 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
   
         #test
-        self.ui.pushButton_test_hand.clicked.connect(self.on_pushButton_test_hand_clicked)
+
 
     def show_settings(self):
         self.settings_dialog.refresh_hand_actions(prefer_connected=True)
@@ -142,6 +142,7 @@ class MainWindow(QMainWindow):
         self.sig_request_hand_disconnect.connect(self.hand_worker.Disconnect)
         self.sig_request_hand_set_joint_positions.connect(self.hand_worker.Set_joint_positions)
         self.sig_request_hand_set_speed.connect(self.hand_worker.Set_speed)
+        self.settings_dialog.sig_test_hand_action.connect(self.hand_worker.ExecuteTestAction)
         self.slave_arm_worker.sig_hand_closed_changed.connect(self.hand_worker.ExecuteFollowState)
 
         # Connect the worker's signals to the main window's slots
@@ -171,6 +172,7 @@ class MainWindow(QMainWindow):
             Logger.instance().info(f"[LinkHand] disconnected successfully")
             self.ui.pushButton_connect_hand.setText("Connect")
             self.if_hand_connected = False
+            self.settings_dialog.update_hand_test_button()
         else:
             Logger.instance().error(f"[LinkHand] failed to disconnect: {msg}")
 
@@ -225,8 +227,7 @@ class MainWindow(QMainWindow):
                 hand_model, hand_type_, hand_comm_type, hand_comm_info
             )
 
-    def on_pushButton_test_hand_clicked(self):
-        self.sig_request_hand_set_joint_positions.emit([255, 0, 255, 255, 255, 255])
+
 
 #endregion===================hand thread=========================
 

@@ -1,0 +1,97 @@
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
+
+from src.devices.drivers_factory import create_camera
+from src.ui.log_stream import Logger
+
+
+class CameraThread(QObject):
+    """相机工作对象，在所属线程中连接设备并定时读取彩色帧。"""
+
+    sig_connect_result = Signal(bool, str)
+    sig_disconnect_result = Signal(bool, str)
+    sig_color_frame = Signal(object)  # BGR8 numpy.ndarray，形状为 (高, 宽, 3)
+
+    def __init__(self):
+        super().__init__()
+        self.camera = None
+        self.if_connected = False
+        self.timer_read_frame = QTimer(self)
+        self.timer_read_frame.timeout.connect(self.OnTimerTriggeredReadFrame)
+
+    @Slot(str)
+    def ConnectCamera(self, camera_type: str) -> bool:
+        if self.if_connected:
+            self.sig_connect_result.emit(False, "请先断开相机，再连接设备")
+            return False
+
+        try:
+            camera = create_camera(camera_type)
+            if not camera.Connect():
+                message = f"[{camera.name}] failed to connect"
+                Logger.instance().error(message)
+                self.sig_connect_result.emit(False, message)
+                return False
+        except Exception as error:
+            message = f"相机连接失败: {error}"
+            Logger.instance().error(message)
+            self.sig_connect_result.emit(False, message)
+            return False
+
+        self.camera = camera
+        self.if_connected = True
+        message = f"[{camera.name}] connected successfully"
+        Logger.instance().info(message)
+        self.sig_connect_result.emit(True, message)
+        return True
+
+    @Slot()
+    def Disconnect(self) -> bool:
+        self.StopTimer()
+        if self.camera is None or not self.if_connected:
+            self.sig_disconnect_result.emit(False, "相机尚未连接")
+            return False
+
+        try:
+            if not self.camera.Disconnect():
+                message = f"[{self.camera.name}] failed to disconnect"
+                Logger.instance().error(message)
+                self.sig_disconnect_result.emit(False, message)
+                return False
+        except Exception as error:
+            message = f"[{self.camera.name}] disconnect failed: {error}"
+            Logger.instance().error(message)
+            self.sig_disconnect_result.emit(False, message)
+            return False
+
+        name = self.camera.name
+        self.camera = None
+        self.if_connected = False
+        message = f"[{name}] disconnected successfully"
+        Logger.instance().info(message)
+        self.sig_disconnect_result.emit(True, message)
+        return True
+
+    @Slot(int)
+    def StartTimer(self, interval_ms: int = 20) -> bool:
+        if not self.if_connected:
+            Logger.instance().error("相机尚未连接，无法开始取帧")
+            return False
+        self.timer_read_frame.start(interval_ms if interval_ms > 0 else 20)
+        return True
+
+    @Slot()
+    def StopTimer(self):
+        if self.timer_read_frame.isActive():
+            self.timer_read_frame.stop()
+
+    @Slot()
+    def OnTimerTriggeredReadFrame(self):
+        if not self.if_connected or self.camera is None:
+            return
+        try:
+            frame = self.camera.Get_color_frame()
+        except Exception as error:
+            Logger.instance().error(f"[{self.camera.name}] get color frame failed: {error}")
+            return
+        if frame is not None:
+            self.sig_color_frame.emit(frame)

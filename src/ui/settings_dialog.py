@@ -2,7 +2,7 @@ import json
 import math
 from pathlib import Path
 
-from PySide6.QtCore import QIODevice, QSaveFile, QSignalBlocker, Qt
+from PySide6.QtCore import QIODevice, QSaveFile, QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import QAbstractItemView, QDialog, QHeaderView, QInputDialog, QMessageBox, QTableWidgetItem
 
 from src.ui.log_stream import Logger
@@ -11,6 +11,8 @@ from src.shared_data.robot_share_data import RobotSharedMemory
 
 
 class SettingsDialog(QDialog):
+    sig_test_hand_action = Signal(str, str, list, int, int)
+
     CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "slave_arm.json"
     HAND_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "hand_control.json"
 
@@ -36,6 +38,8 @@ class SettingsDialog(QDialog):
         self.ui.pushButton_save_hand_actions.clicked.connect(self.save_hand_actions)
         self.ui.pushButton_add_hand_actions.clicked.connect(self.add_hand_action)
         self.ui.pushButton_delete_hand_actions.clicked.connect(self.delete_hand_actions)
+        self.ui.pushButton_hand_test.clicked.connect(self.test_hand_action)
+        self.ui.comboBox_hand_actions_test.currentTextChanged.connect(self.update_hand_test_button)
         table = self.ui.tableWidget_hand_actions
         table.setEditTriggers(
             QAbstractItemView.EditTrigger.DoubleClicked
@@ -56,13 +60,14 @@ class SettingsDialog(QDialog):
         )
 
     def refresh_hand_action_choices(self):
-        """用当前表格的动作名称更新张开和闭合动作选项。"""
+        """用当前表格的动作名称更新张开、闭合和测试选项。"""
         table = self.ui.tableWidget_hand_actions
         names = [table.item(row, 0).text() for row in range(table.rowCount())
                  if table.item(row, 0) is not None]
         for combo, default_name in (
             (self.ui.comboBox_hand_current_close, "close"),
             (self.ui.comboBox_hand_current_open, "open"),
+            (self.ui.comboBox_hand_actions_test, "open"),
         ):
             selected_name = combo.currentText()
             with QSignalBlocker(combo):
@@ -72,6 +77,37 @@ class SettingsDialog(QDialog):
                     combo.setCurrentText(selected_name)
                 elif default_name in names:
                     combo.setCurrentText(default_name)
+        self.update_hand_test_button()
+
+    def update_hand_test_button(self):
+        """仅在当前型号的灵巧手已连接且选有动作时允许测试。"""
+        connected_model = self.shared_data.hand.read().name
+        self.ui.pushButton_hand_test.setEnabled(
+            bool(connected_model)
+            and connected_model == self._displayed_hand_model
+            and bool(self.ui.comboBox_hand_actions_test.currentText())
+        )
+
+    def test_hand_action(self):
+        """把表格中选中动作的当前数值交给手线程执行。"""
+        hand_model = self._displayed_hand_model
+        action_name = self.ui.comboBox_hand_actions_test.currentText()
+        if not hand_model or hand_model != self.shared_data.hand.read().name:
+            Logger.instance().error("请先连接当前型号的灵巧手")
+            return
+        table = self.ui.tableWidget_hand_actions
+        row = next((i for i in range(table.rowCount())
+                    if table.item(i, 0) and table.item(i, 0).text() == action_name), None)
+        if row is None:
+            Logger.instance().error("请选择有效的灵巧手动作")
+            return
+        try:
+            values = [int(table.item(row, column).text().strip())
+                      for column in range(1, table.columnCount())]
+        except (AttributeError, ValueError) as error:
+            Logger.instance().error(f"动作 {action_name} 含有无效的关节位置、速度或力矩: {error}")
+            return
+        self.sig_test_hand_action.emit(hand_model, action_name, values[:-2], values[-2], values[-1])
 
     def _read_hand_config(self):
         """读取灵巧手配置，并确认顶层结构可按型号查找。"""

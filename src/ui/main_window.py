@@ -524,9 +524,6 @@ class Ui_MainWindow(object):
 
         self.gridLayout_5.addWidget(self.comboBox_hand_model, 0, 1, 1, 1)
 
-        self.pushButton_test_hand = QPushButton(self.centralwidget)
-        self.pushButton_test_hand.setObjectName(u"pushButton_test_hand")
-        self.pushButton_test_hand.setGeometry(QRect(340, 490, 95, 25))
         self.label_37 = QLabel(self.centralwidget)
         self.label_37.setObjectName(u"label_37")
         self.label_37.setGeometry(QRect(550, 480, 428, 22))
@@ -614,7 +611,6 @@ class Ui_MainWindow(object):
         self.label_33.setText(QCoreApplication.translate("MainWindow", u"Model", None))
         self.comboBox_hand_model.setItemText(0, QCoreApplication.translate("MainWindow", u"LinkerO6", None))
 
-        self.pushButton_test_hand.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
         self.label_37.setText(QCoreApplication.translate("MainWindow", u"\u8fd9\u91cc\u6ce8\u610f \u5982\u679c\u662fubuntu\u4e0b\u7528can  \u9700\u8981\u5728\u914d\u7f6e\u6587\u4ef6\u4e2d\u5199\u5165root\u5bc6\u7801", None))
     # retranslateUi
 

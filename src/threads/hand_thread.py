@@ -111,27 +111,48 @@ class HandThread(QObject):
             # 优先使用设置页保存的动作名称；旧配置没有选择项时使用 close/open。
             action_name = hand_config.get(f"current_{action_kind}", action_kind)
             action = hand_config["actions"][action_name]
-            positions = action["positions"]
-            if len(positions) != self.hand.MAX_JOINTS():
-                raise ValueError(f"动作 {action_name} 的关节数量与 {hand_model} 不一致")
-            position_range = hand_config["position_range"]
-            if any(type(value) is not int or not position_range["min"] <= value <= position_range["max"]
-                   for value in positions):
-                raise ValueError(f"动作 {action_name} 的位置超出配置范围")
             speed = action.get("speed", hand_config.get("default_speed", 255))
             force = action.get("force", hand_config.get("default_force", 255))
-            if any(type(value) is not int or not 0 <= value <= 255 for value in (speed, force)):
-                raise ValueError(f"动作 {action_name} 的速度或力矩必须是 0～255 的整数")
-            # 先设置每个关节的力矩和速度，再发送目标位置。
-            if not self.hand.Set_force([force] * len(positions)):
-                raise RuntimeError("设置力矩失败")
-            if not self.hand.Set_speed([speed] * len(positions)):
-                raise RuntimeError("设置速度失败")
-            if not self.hand.Set_joint_positions(positions):
-                raise RuntimeError("设置关节位置失败")
+            self._execute_action(hand_model, action_name, action["positions"], speed, force,
+                                 hand_config["position_range"])
             Logger.instance().info(f"[{hand_model}] 扳机执行 {action_kind}: {action_name}")
             return True
         except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError) as error:
             Logger.instance().error(f"hand {action_kind} 动作执行失败: {error}")
             return False
+
+    @Slot(str, str, list, int, int)
+    def ExecuteTestAction(self, hand_model: str, action_name: str,
+                          positions: list, speed: int, force: int) -> bool:
+        """执行设置页当前表格中的动作，包括尚未保存的数值。"""
+        try:
+            with self.CONFIG_PATH.open(encoding="utf-8") as file:
+                hand_config = json.load(file)[hand_model]
+            self._execute_action(hand_model, action_name, positions, speed, force,
+                                 hand_config["position_range"])
+            Logger.instance().info(f"[{hand_model}] 测试动作成功: {action_name}")
+            return True
+        except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError) as error:
+            Logger.instance().error(f"[{hand_model}] 测试动作 {action_name} 失败: {error}")
+            return False
+
+    def _execute_action(self, hand_model, action_name, positions, speed, force, position_range):
+        """在手线程中校验参数并按力矩、速度、位置顺序发送命令。"""
+        if not self.if_connected or self.hand is None:
+            raise RuntimeError("灵巧手未连接")
+        if self.shared_data.hand.read().name != hand_model:
+            raise ValueError(f"当前连接的灵巧手不是 {hand_model}")
+        if len(positions) != self.hand.MAX_JOINTS():
+            raise ValueError(f"动作 {action_name} 的关节数量与 {hand_model} 不一致")
+        if any(type(value) is not int or not position_range["min"] <= value <= position_range["max"]
+               for value in positions):
+            raise ValueError(f"动作 {action_name} 的位置超出配置范围")
+        if any(type(value) is not int or not 0 <= value <= 255 for value in (speed, force)):
+            raise ValueError(f"动作 {action_name} 的速度或力矩必须是 0～255 的整数")
+        if not self.hand.Set_force([force] * len(positions)):
+            raise RuntimeError("设置力矩失败")
+        if not self.hand.Set_speed([speed] * len(positions)):
+            raise RuntimeError("设置速度失败")
+        if not self.hand.Set_joint_positions(positions):
+            raise RuntimeError("设置关节位置失败")
         
