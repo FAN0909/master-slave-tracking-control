@@ -40,7 +40,7 @@ class SettingsDialog(QDialog):
             QAbstractItemView.EditTrigger.DoubleClicked
             | QAbstractItemView.EditTrigger.EditKeyPressed
         )
-        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         table.verticalHeader().hide()
         table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         table.itemSelectionChanged.connect(self.update_delete_hand_action_button)
@@ -53,6 +53,24 @@ class SettingsDialog(QDialog):
         self.ui.pushButton_delete_hand_actions.setEnabled(
             self._displayed_hand_model is not None and bool(table.selectionModel().selectedRows())
         )
+
+    def refresh_hand_action_choices(self):
+        """用当前表格的动作名称更新张开和闭合动作选项。"""
+        table = self.ui.tableWidget_hand_actions
+        names = [table.item(row, 0).text() for row in range(table.rowCount())
+                 if table.item(row, 0) is not None]
+        for combo, default_name in (
+            (self.ui.comboBox_hand_current_close, "close"),
+            (self.ui.comboBox_hand_current_open, "open"),
+        ):
+            selected_name = combo.currentText()
+            with QSignalBlocker(combo):
+                combo.clear()
+                combo.addItems(names)
+                if selected_name in names:
+                    combo.setCurrentText(selected_name)
+                elif default_name in names:
+                    combo.setCurrentText(default_name)
 
     def _read_hand_config(self):
         """读取灵巧手配置，并确认顶层结构可按型号查找。"""
@@ -128,6 +146,7 @@ class SettingsDialog(QDialog):
         self.ui.pushButton_save_hand_actions.setEnabled(True)
         self.ui.pushButton_add_hand_actions.setEnabled(True)
         self.update_delete_hand_action_button()
+        self.refresh_hand_action_choices()
         return True
 
     def refresh_hand_actions(self, prefer_connected=False):
@@ -163,6 +182,7 @@ class SettingsDialog(QDialog):
             self.ui.pushButton_save_hand_actions.setEnabled(False)
             self.ui.pushButton_add_hand_actions.setEnabled(False)
             self.ui.pushButton_delete_hand_actions.setEnabled(False)
+            self.refresh_hand_action_choices()
         # 重建型号列表时阻止 currentTextChanged 重入加载流程。
         with QSignalBlocker(combo):
             combo.clear()
@@ -213,6 +233,7 @@ class SettingsDialog(QDialog):
         table.setItem(row, table.columnCount() - 2, QTableWidgetItem(str(self._default_hand_speed)))
         table.setItem(row, table.columnCount() - 1, QTableWidgetItem(str(self._default_hand_force)))
         table.selectRow(row)
+        self.refresh_hand_action_choices()
 
     def delete_hand_actions(self):
         """从表格移除选中的动作，等待 Save Actions 写入配置。"""
@@ -222,6 +243,7 @@ class SettingsDialog(QDialog):
         # 倒序删除，避免行号移动影响后续选中行。
         for row in sorted((index.row() for index in table.selectionModel().selectedRows()), reverse=True):
             table.removeRow(row)
+        self.refresh_hand_action_choices()
 
     def save_hand_actions(self):
         """把表格中的关节位置、速度和力矩写回当前型号的动作配置。"""
