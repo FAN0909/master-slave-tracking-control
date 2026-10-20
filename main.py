@@ -15,6 +15,8 @@ from serial.tools import list_ports
 from src.shared_data.robot_share_data import RobotSharedMemory
 from src.devices.drivers.Link_hand import LinkHand
 
+STYLE_PATH = Path(__file__).resolve().parent / "src" / "res" / "style" / "main_window.qss"
+
 class MainWindow(QMainWindow):
 
     #define signals to request actions in the worker thread slave_arm_worker
@@ -52,6 +54,13 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        for label in (self.ui.label_master_status, self.ui.label_slave_status):
+            label.setProperty("uiRole", "armStatus")
+        for index in range(1, 4):
+            getattr(self.ui, f"label_camera_status_{index}").setProperty("uiRole", "cameraStatus")
+            getattr(self.ui, f"label_camera_preview_{index}").setProperty("uiRole", "cameraPreview")
+        style = STYLE_PATH.read_text(encoding="utf-8")
+        self.setStyleSheet(style.replace("__STYLE_DIR__", STYLE_PATH.parent.as_posix()))
         self.shared_robot_data = RobotSharedMemory()
         self.settings_dialog = SettingsDialog(self.shared_robot_data, self)
         self.init_log_window()
@@ -96,6 +105,8 @@ class MainWindow(QMainWindow):
 
     def init_ui_state(self):
         self.ui.menuSet_Param.triggered.connect(self.show_settings)
+        self._set_arm_status(self.ui.label_master_status, "disconnected")
+        self._set_arm_status(self.ui.label_slave_status, "disconnected")
         #Bind button click command slave arm
         self.ui.Btn_robot_connect.clicked.connect(self.on_Btn_robot_connect_clicked)
         self.ui.pushButton_robot_PowerOn.clicked.connect(self.on_pushButton_robot_PowerOn_clicked)
@@ -112,6 +123,23 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
   
         #test
+
+    @staticmethod
+    def _set_arm_status(label, state, message=""):
+        labels = {
+            "disconnected": "● 未连接",
+            "connecting": "● 连接中",
+            "disconnecting": "● 断开中",
+            "connected": "● 已连接",
+            "failed": "● 连接失败",
+            "disconnect_failed": "● 断开失败",
+        }
+        label.setText(labels[state])
+        label.setToolTip(message)
+        label.setProperty("armState", state)
+        label.style().unpolish(label)
+        label.style().polish(label)
+        label.update()
 
 
     def show_settings(self):
@@ -255,9 +283,9 @@ class MainWindow(QMainWindow):
     # 遥操作状态回调
     def on_teleop_state_changed(self, is_running):
         if is_running:
-            self.ui.label.setText("Teleoperation: Running")
+            self.ui.statusbar.showMessage("Teleoperation: Running")
         else:
-            self.ui.label.setText("Teleoperation: Stopped")
+            self.ui.statusbar.showMessage("Teleoperation: Stopped")
 
     def on_follow_result(self, success):
         if success:
@@ -293,35 +321,44 @@ class MainWindow(QMainWindow):
     def on_master_arm_joint_positions_updated(self, positions):
         if len(positions) < len(self.master_arm.ids):
                 return
-        for i in range(len(self.master_arm.ids)):
-            getattr(self.ui, f"lineEdit_master_joint{i}").setText(f"{positions[i]:.3f}")
+        for i in range(min(len(positions), 7)):
+            getattr(self.settings_dialog.ui, f"lineEdit_master_joint{i}").setText(f"{positions[i]:.3f}")
 
     def on_master_arm_connect_result(self, success, msg):
         if success:
             self.if_master_connected = True
             self.ui.pushButton_connect_master_arm.setText("Disconnect")
-            self.ui.label.setText(f"status: {msg}")
+            self._set_arm_status(self.ui.label_master_status, "connected", msg)
+            self.ui.statusbar.showMessage(f"status: {msg}")
             self.on_master_robot_ReadPos()
         else:
             self.if_master_connected = False
-            self.ui.label.setText(f"status: {msg}")
+            self.ui.pushButton_connect_master_arm.setText("Connect")
+            self._set_arm_status(self.ui.label_master_status, "failed", msg)
+            self.ui.statusbar.showMessage(f"status: {msg}")
 
     def on_master_arm_disconnect_result(self, success, msg):
         if success:
             self.if_master_connected = False
             self.ui.pushButton_connect_master_arm.setText("Connect")
-            self.ui.label.setText(f"status: {msg}")
+            self._set_arm_status(self.ui.label_master_status, "disconnected", msg)
+            self.ui.statusbar.showMessage(f"status: {msg}")
+        else:
+            self._set_arm_status(self.ui.label_master_status, "disconnect_failed", msg)
+            self.ui.statusbar.showMessage(f"status: {msg}")
 
     #endregion================= master arm thread 执行完毕的回调（负责更新UI和状态） =================
 
     #region================= master arm thread button click =====================
     def on_pushButton_master_connect_clicked(self):
         if self.if_master_connected:
-            self.ui.label.setText("Disconnecting...")
+            self._set_arm_status(self.ui.label_master_status, "disconnecting")
+            self.ui.statusbar.showMessage("Disconnecting...")
             self.sig_request_master_disconnect.emit() 
             self.sig_request_master_stop_read_pos.emit()  # Stop reading positions when connecting   
         else:
-            self.ui.label.setText("Connecting...")
+            self._set_arm_status(self.ui.label_master_status, "connecting")
+            self.ui.statusbar.showMessage("Connecting...")
             self.sig_request_master_connect.emit()
 
     def on_pushButton_refresh_master_port_clicked(self):
@@ -385,15 +422,18 @@ class MainWindow(QMainWindow):
 
     def on_Btn_robot_connect_clicked(self):
         if self.if_slave_connected:
-            self.ui.label.setText("Disconnecting...")
+            self._set_arm_status(self.ui.label_slave_status, "disconnecting")
+            self.ui.statusbar.showMessage("Disconnecting...")
             self.sig_request_disconnect.emit() 
             self.sig_request_stop_read_pos.emit()  # Stop reading positions when connecting   
 
         else:
-            self.ui.label.setText("Connecting...")
+            self._set_arm_status(self.ui.label_slave_status, "connecting")
+            self.ui.statusbar.showMessage("Connecting...")
             IP_address = self.ui.lineEdit_slave_arm_ip.text().strip()
             if not IP_address:
-                self.ui.label.setText("Please enter a valid IP address")
+                self._set_arm_status(self.ui.label_slave_status, "failed", "请输入有效的 IP 地址")
+                self.ui.statusbar.showMessage("Please enter a valid IP address")
                 return
             robot_type = self.ui.comboBox_robot_type.currentText().strip()
             self.ui.Btn_robot_connect.setEnabled(False)
@@ -402,14 +442,14 @@ class MainWindow(QMainWindow):
 
     def on_pushButton_robot_PowerOn_clicked(self):
         if not self.if_slave_connected:
-            self.ui.label.setText("Please connect the robot first")
+            self.ui.statusbar.showMessage("Please connect the robot first")
             return
 
         if self.if_slave_power_on:
-            self.ui.label.setText("Disabling...")
+            self.ui.statusbar.showMessage("Disabling...")
             self.sig_request_disable.emit()    
         else:
-            self.ui.label.setText("Enabling...")
+            self.ui.statusbar.showMessage("Enabling...")
             self.sig_request_enable.emit()      
 
 
@@ -427,23 +467,14 @@ class MainWindow(QMainWindow):
     def on_joint_positions_updated(self, positions):
         if len(positions) < 7:
                 return
-        self.ui.lineEdit_slave_joint0.setText(f"{positions[0]:.3f}")
-        self.ui.lineEdit_slave_joint1.setText(f"{positions[1]:.3f}")
-        self.ui.lineEdit_slave_joint2.setText(f"{positions[2]:.3f}")
-        self.ui.lineEdit_slave_joint3.setText(f"{positions[3]:.3f}")
-        self.ui.lineEdit_slave_joint4.setText(f"{positions[4]:.3f}")
-        self.ui.lineEdit_slave_joint5.setText(f"{positions[5]:.3f}")
-        self.ui.lineEdit_slave_joint6.setText(f"{positions[6]:.3f}")
+        for i, position in enumerate(positions[:7]):
+            getattr(self.settings_dialog.ui, f"lineEdit_slave_joint{i}").setText(f"{position:.3f}")
 
     def on_tcp_positions_updated(self, positions):
         if len(positions) < 6:
             return
-        self.ui.lineEdit_slave_x.setText(f"{positions[0]:.3f}")
-        self.ui.lineEdit_slave_y.setText(f"{positions[1]:.3f}")
-        self.ui.lineEdit_slave_z.setText(f"{positions[2]:.3f}")
-        self.ui.lineEdit_slave_a.setText(f"{positions[3]:.3f}")
-        self.ui.lineEdit_slave_b.setText(f"{positions[4]:.3f}")
-        self.ui.lineEdit_slave_c.setText(f"{positions[5]:.3f}")
+        for axis, position in zip("xyzabc", positions[:6]):
+            getattr(self.settings_dialog.ui, f"lineEdit_slave_{axis}").setText(f"{position:.3f}")
 
     # region ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 
@@ -453,11 +484,14 @@ class MainWindow(QMainWindow):
         if success:
             self.if_slave_connected = True
             self.ui.Btn_robot_connect.setText("Disconnect")
-            self.ui.label.setText(f"status: {msg}")
+            self._set_arm_status(self.ui.label_slave_status, "connected", msg)
+            self.ui.statusbar.showMessage(f"status: {msg}")
             self.on_pushButton_robot_ReadPos_clicked()
         else:
             self.if_slave_connected = False
-            self.ui.label.setText(f"status: {msg}")
+            self.ui.Btn_robot_connect.setText("Connect")
+            self._set_arm_status(self.ui.label_slave_status, "failed", msg)
+            self.ui.statusbar.showMessage(f"status: {msg}")
 
     def on_disconnect_result(self, success, msg):
         self.if_start_follow = False
@@ -467,21 +501,23 @@ class MainWindow(QMainWindow):
             self.if_slave_power_on = False
             self.ui.Btn_robot_connect.setText("Connect")
             self.ui.pushButton_robot_PowerOn.setText("PowerOn")
-            self.ui.label.setText(f"status: {msg}")
+            self._set_arm_status(self.ui.label_slave_status, "disconnected", msg)
+            self.ui.statusbar.showMessage(f"status: {msg}")
         else:
-            self.ui.label.setText(f"status: {msg}")
+            self._set_arm_status(self.ui.label_slave_status, "disconnect_failed", msg)
+            self.ui.statusbar.showMessage(f"status: {msg}")
 
     def on_enable_result(self, success, msg):
         if success:
             self.if_slave_power_on = True
             self.ui.pushButton_robot_PowerOn.setText("Disable")
-            self.ui.label.setText(f"status: {msg}")
+            self.ui.statusbar.showMessage(f"status: {msg}")
 
     def on_disable_result(self, success, msg):
         if success:
             self.if_slave_power_on = False
             self.ui.pushButton_robot_PowerOn.setText("Enable")
-            self.ui.label.setText(f"status: {msg}")
+            self.ui.statusbar.showMessage(f"status: {msg}")
 
     # endregion ================= slave arm thread 执行完毕的回调（负责更新UI和状态） =================
 

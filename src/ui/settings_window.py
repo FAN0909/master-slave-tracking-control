@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
-    QDialogButtonBox, QFormLayout, QGroupBox, QHBoxLayout,
+    QDialogButtonBox, QGridLayout, QGroupBox, QHBoxLayout,
     QHeaderView, QLabel, QLineEdit, QPushButton,
     QSizePolicy, QSpacerItem, QTabWidget, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget)
@@ -25,70 +25,400 @@ class Ui_SettingsDialog(object):
     def setupUi(self, SettingsDialog):
         if not SettingsDialog.objectName():
             SettingsDialog.setObjectName(u"SettingsDialog")
-        SettingsDialog.resize(820, 535)
-        SettingsDialog.setMinimumSize(QSize(480, 320))
+        SettingsDialog.resize(1025, 535)
+        SettingsDialog.setMinimumSize(QSize(800, 400))
         self.verticalLayout = QVBoxLayout(SettingsDialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.tabWidget_settings = QTabWidget(SettingsDialog)
         self.tabWidget_settings.setObjectName(u"tabWidget_settings")
         self.tab_robotset = QWidget()
         self.tab_robotset.setObjectName(u"tab_robotset")
-        self.verticalLayout_2 = QVBoxLayout(self.tab_robotset)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.horizontalLayout_robotset = QHBoxLayout(self.tab_robotset)
+        self.horizontalLayout_robotset.setObjectName(u"horizontalLayout_robotset")
         self.groupBox = QGroupBox(self.tab_robotset)
         self.groupBox.setObjectName(u"groupBox")
+        self.verticalLayout_groupBox = QVBoxLayout(self.groupBox)
+        self.verticalLayout_groupBox.setObjectName(u"verticalLayout_groupBox")
+        self.gridLayout_master_telemetry = QGridLayout()
+        self.gridLayout_master_telemetry.setObjectName(u"gridLayout_master_telemetry")
+        self.label_master_joint_header = QLabel(self.groupBox)
+        self.label_master_joint_header.setObjectName(u"label_master_joint_header")
 
-        self.horizontalLayout.addWidget(self.groupBox)
+        self.gridLayout_master_telemetry.addWidget(self.label_master_joint_header, 0, 0, 1, 1)
+
+        self.label_master_tcp_header = QLabel(self.groupBox)
+        self.label_master_tcp_header.setObjectName(u"label_master_tcp_header")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_tcp_header, 0, 2, 1, 1)
+
+        self.label_master_joint0 = QLabel(self.groupBox)
+        self.label_master_joint0.setObjectName(u"label_master_joint0")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_joint0, 1, 0, 1, 1)
+
+        self.lineEdit_master_joint0 = QLineEdit(self.groupBox)
+        self.lineEdit_master_joint0.setObjectName(u"lineEdit_master_joint0")
+        self.lineEdit_master_joint0.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_joint0, 1, 1, 1, 1)
+
+        self.label_master_joint1 = QLabel(self.groupBox)
+        self.label_master_joint1.setObjectName(u"label_master_joint1")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_joint1, 2, 0, 1, 1)
+
+        self.lineEdit_master_joint1 = QLineEdit(self.groupBox)
+        self.lineEdit_master_joint1.setObjectName(u"lineEdit_master_joint1")
+        self.lineEdit_master_joint1.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_joint1, 2, 1, 1, 1)
+
+        self.label_master_joint2 = QLabel(self.groupBox)
+        self.label_master_joint2.setObjectName(u"label_master_joint2")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_joint2, 3, 0, 1, 1)
+
+        self.lineEdit_master_joint2 = QLineEdit(self.groupBox)
+        self.lineEdit_master_joint2.setObjectName(u"lineEdit_master_joint2")
+        self.lineEdit_master_joint2.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_joint2, 3, 1, 1, 1)
+
+        self.label_master_joint3 = QLabel(self.groupBox)
+        self.label_master_joint3.setObjectName(u"label_master_joint3")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_joint3, 4, 0, 1, 1)
+
+        self.lineEdit_master_joint3 = QLineEdit(self.groupBox)
+        self.lineEdit_master_joint3.setObjectName(u"lineEdit_master_joint3")
+        self.lineEdit_master_joint3.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_joint3, 4, 1, 1, 1)
+
+        self.label_master_joint4 = QLabel(self.groupBox)
+        self.label_master_joint4.setObjectName(u"label_master_joint4")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_joint4, 5, 0, 1, 1)
+
+        self.lineEdit_master_joint4 = QLineEdit(self.groupBox)
+        self.lineEdit_master_joint4.setObjectName(u"lineEdit_master_joint4")
+        self.lineEdit_master_joint4.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_joint4, 5, 1, 1, 1)
+
+        self.label_master_joint5 = QLabel(self.groupBox)
+        self.label_master_joint5.setObjectName(u"label_master_joint5")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_joint5, 6, 0, 1, 1)
+
+        self.lineEdit_master_joint5 = QLineEdit(self.groupBox)
+        self.lineEdit_master_joint5.setObjectName(u"lineEdit_master_joint5")
+        self.lineEdit_master_joint5.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_joint5, 6, 1, 1, 1)
+
+        self.label_master_joint6 = QLabel(self.groupBox)
+        self.label_master_joint6.setObjectName(u"label_master_joint6")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_joint6, 7, 0, 1, 1)
+
+        self.lineEdit_master_joint6 = QLineEdit(self.groupBox)
+        self.lineEdit_master_joint6.setObjectName(u"lineEdit_master_joint6")
+        self.lineEdit_master_joint6.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_joint6, 7, 1, 1, 1)
+
+        self.label_master_x = QLabel(self.groupBox)
+        self.label_master_x.setObjectName(u"label_master_x")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_x, 1, 2, 1, 1)
+
+        self.lineEdit_master_x = QLineEdit(self.groupBox)
+        self.lineEdit_master_x.setObjectName(u"lineEdit_master_x")
+        self.lineEdit_master_x.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_x, 1, 3, 1, 1)
+
+        self.label_master_y = QLabel(self.groupBox)
+        self.label_master_y.setObjectName(u"label_master_y")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_y, 2, 2, 1, 1)
+
+        self.lineEdit_master_y = QLineEdit(self.groupBox)
+        self.lineEdit_master_y.setObjectName(u"lineEdit_master_y")
+        self.lineEdit_master_y.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_y, 2, 3, 1, 1)
+
+        self.label_master_z = QLabel(self.groupBox)
+        self.label_master_z.setObjectName(u"label_master_z")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_z, 3, 2, 1, 1)
+
+        self.lineEdit_master_z = QLineEdit(self.groupBox)
+        self.lineEdit_master_z.setObjectName(u"lineEdit_master_z")
+        self.lineEdit_master_z.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_z, 3, 3, 1, 1)
+
+        self.label_master_a = QLabel(self.groupBox)
+        self.label_master_a.setObjectName(u"label_master_a")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_a, 4, 2, 1, 1)
+
+        self.lineEdit_master_a = QLineEdit(self.groupBox)
+        self.lineEdit_master_a.setObjectName(u"lineEdit_master_a")
+        self.lineEdit_master_a.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_a, 4, 3, 1, 1)
+
+        self.label_master_b = QLabel(self.groupBox)
+        self.label_master_b.setObjectName(u"label_master_b")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_b, 5, 2, 1, 1)
+
+        self.lineEdit_master_b = QLineEdit(self.groupBox)
+        self.lineEdit_master_b.setObjectName(u"lineEdit_master_b")
+        self.lineEdit_master_b.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_b, 5, 3, 1, 1)
+
+        self.label_master_c = QLabel(self.groupBox)
+        self.label_master_c.setObjectName(u"label_master_c")
+
+        self.gridLayout_master_telemetry.addWidget(self.label_master_c, 6, 2, 1, 1)
+
+        self.lineEdit_master_c = QLineEdit(self.groupBox)
+        self.lineEdit_master_c.setObjectName(u"lineEdit_master_c")
+        self.lineEdit_master_c.setReadOnly(True)
+
+        self.gridLayout_master_telemetry.addWidget(self.lineEdit_master_c, 6, 3, 1, 1)
+
+        self.gridLayout_master_telemetry.setColumnStretch(1, 1)
+        self.gridLayout_master_telemetry.setColumnStretch(3, 1)
+
+        self.verticalLayout_groupBox.addLayout(self.gridLayout_master_telemetry)
+
+        self.spacer_groupBox = QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_groupBox.addItem(self.spacer_groupBox)
+
+
+        self.horizontalLayout_robotset.addWidget(self.groupBox)
 
         self.groupBox_2 = QGroupBox(self.tab_robotset)
         self.groupBox_2.setObjectName(u"groupBox_2")
-        self.formLayoutWidget = QWidget(self.groupBox_2)
-        self.formLayoutWidget.setObjectName(u"formLayoutWidget")
-        self.formLayoutWidget.setGeometry(QRect(10, 30, 181, 89))
-        self.formLayout = QFormLayout(self.formLayoutWidget)
-        self.formLayout.setObjectName(u"formLayout")
-        self.formLayout.setContentsMargins(0, 0, 0, 0)
-        self.label = QLabel(self.formLayoutWidget)
-        self.label.setObjectName(u"label")
+        self.verticalLayout_groupBox_2 = QVBoxLayout(self.groupBox_2)
+        self.verticalLayout_groupBox_2.setObjectName(u"verticalLayout_groupBox_2")
+        self.gridLayout_slave_params = QGridLayout()
+        self.gridLayout_slave_params.setObjectName(u"gridLayout_slave_params")
+        self.label_slave_arm_vel = QLabel(self.groupBox_2)
+        self.label_slave_arm_vel.setObjectName(u"label_slave_arm_vel")
 
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label)
+        self.gridLayout_slave_params.addWidget(self.label_slave_arm_vel, 0, 0, 1, 1)
 
-        self.label_2 = QLabel(self.formLayoutWidget)
-        self.label_2.setObjectName(u"label_2")
-
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label_2)
-
-        self.label_3 = QLabel(self.formLayoutWidget)
-        self.label_3.setObjectName(u"label_3")
-
-        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label_3)
-
-        self.lineEdit_slave_arm_vel = QLineEdit(self.formLayoutWidget)
+        self.lineEdit_slave_arm_vel = QLineEdit(self.groupBox_2)
         self.lineEdit_slave_arm_vel.setObjectName(u"lineEdit_slave_arm_vel")
 
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.lineEdit_slave_arm_vel)
+        self.gridLayout_slave_params.addWidget(self.lineEdit_slave_arm_vel, 0, 1, 1, 1)
 
-        self.lineEdit_slave_arm_acc = QLineEdit(self.formLayoutWidget)
+        self.label_slave_arm_acc = QLabel(self.groupBox_2)
+        self.label_slave_arm_acc.setObjectName(u"label_slave_arm_acc")
+
+        self.gridLayout_slave_params.addWidget(self.label_slave_arm_acc, 1, 0, 1, 1)
+
+        self.lineEdit_slave_arm_acc = QLineEdit(self.groupBox_2)
         self.lineEdit_slave_arm_acc.setObjectName(u"lineEdit_slave_arm_acc")
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.lineEdit_slave_arm_acc)
+        self.gridLayout_slave_params.addWidget(self.lineEdit_slave_arm_acc, 1, 1, 1, 1)
 
-        self.lineEdit_slave_arm_jerk = QLineEdit(self.formLayoutWidget)
+        self.label_slave_arm_jerk = QLabel(self.groupBox_2)
+        self.label_slave_arm_jerk.setObjectName(u"label_slave_arm_jerk")
+
+        self.gridLayout_slave_params.addWidget(self.label_slave_arm_jerk, 2, 0, 1, 1)
+
+        self.lineEdit_slave_arm_jerk = QLineEdit(self.groupBox_2)
         self.lineEdit_slave_arm_jerk.setObjectName(u"lineEdit_slave_arm_jerk")
 
-        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.lineEdit_slave_arm_jerk)
+        self.gridLayout_slave_params.addWidget(self.lineEdit_slave_arm_jerk, 2, 1, 1, 1)
 
         self.pushButton_save_slave_param = QPushButton(self.groupBox_2)
         self.pushButton_save_slave_param.setObjectName(u"pushButton_save_slave_param")
-        self.pushButton_save_slave_param.setGeometry(QRect(280, 400, 95, 25))
 
-        self.horizontalLayout.addWidget(self.groupBox_2)
+        self.gridLayout_slave_params.addWidget(self.pushButton_save_slave_param, 3, 0, 1, 2)
 
 
-        self.verticalLayout_2.addLayout(self.horizontalLayout)
+        self.verticalLayout_groupBox_2.addLayout(self.gridLayout_slave_params)
 
+        self.gridLayout_slave_telemetry = QGridLayout()
+        self.gridLayout_slave_telemetry.setObjectName(u"gridLayout_slave_telemetry")
+        self.label_slave_joint_header = QLabel(self.groupBox_2)
+        self.label_slave_joint_header.setObjectName(u"label_slave_joint_header")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_joint_header, 0, 0, 1, 1)
+
+        self.label_slave_tcp_header = QLabel(self.groupBox_2)
+        self.label_slave_tcp_header.setObjectName(u"label_slave_tcp_header")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_tcp_header, 0, 2, 1, 1)
+
+        self.label_slave_joint0 = QLabel(self.groupBox_2)
+        self.label_slave_joint0.setObjectName(u"label_slave_joint0")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_joint0, 1, 0, 1, 1)
+
+        self.lineEdit_slave_joint0 = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_joint0.setObjectName(u"lineEdit_slave_joint0")
+        self.lineEdit_slave_joint0.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_joint0, 1, 1, 1, 1)
+
+        self.label_slave_joint1 = QLabel(self.groupBox_2)
+        self.label_slave_joint1.setObjectName(u"label_slave_joint1")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_joint1, 2, 0, 1, 1)
+
+        self.lineEdit_slave_joint1 = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_joint1.setObjectName(u"lineEdit_slave_joint1")
+        self.lineEdit_slave_joint1.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_joint1, 2, 1, 1, 1)
+
+        self.label_slave_joint2 = QLabel(self.groupBox_2)
+        self.label_slave_joint2.setObjectName(u"label_slave_joint2")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_joint2, 3, 0, 1, 1)
+
+        self.lineEdit_slave_joint2 = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_joint2.setObjectName(u"lineEdit_slave_joint2")
+        self.lineEdit_slave_joint2.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_joint2, 3, 1, 1, 1)
+
+        self.label_slave_joint3 = QLabel(self.groupBox_2)
+        self.label_slave_joint3.setObjectName(u"label_slave_joint3")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_joint3, 4, 0, 1, 1)
+
+        self.lineEdit_slave_joint3 = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_joint3.setObjectName(u"lineEdit_slave_joint3")
+        self.lineEdit_slave_joint3.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_joint3, 4, 1, 1, 1)
+
+        self.label_slave_joint4 = QLabel(self.groupBox_2)
+        self.label_slave_joint4.setObjectName(u"label_slave_joint4")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_joint4, 5, 0, 1, 1)
+
+        self.lineEdit_slave_joint4 = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_joint4.setObjectName(u"lineEdit_slave_joint4")
+        self.lineEdit_slave_joint4.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_joint4, 5, 1, 1, 1)
+
+        self.label_slave_joint5 = QLabel(self.groupBox_2)
+        self.label_slave_joint5.setObjectName(u"label_slave_joint5")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_joint5, 6, 0, 1, 1)
+
+        self.lineEdit_slave_joint5 = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_joint5.setObjectName(u"lineEdit_slave_joint5")
+        self.lineEdit_slave_joint5.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_joint5, 6, 1, 1, 1)
+
+        self.label_slave_joint6 = QLabel(self.groupBox_2)
+        self.label_slave_joint6.setObjectName(u"label_slave_joint6")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_joint6, 7, 0, 1, 1)
+
+        self.lineEdit_slave_joint6 = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_joint6.setObjectName(u"lineEdit_slave_joint6")
+        self.lineEdit_slave_joint6.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_joint6, 7, 1, 1, 1)
+
+        self.label_slave_x = QLabel(self.groupBox_2)
+        self.label_slave_x.setObjectName(u"label_slave_x")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_x, 1, 2, 1, 1)
+
+        self.lineEdit_slave_x = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_x.setObjectName(u"lineEdit_slave_x")
+        self.lineEdit_slave_x.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_x, 1, 3, 1, 1)
+
+        self.label_slave_y = QLabel(self.groupBox_2)
+        self.label_slave_y.setObjectName(u"label_slave_y")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_y, 2, 2, 1, 1)
+
+        self.lineEdit_slave_y = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_y.setObjectName(u"lineEdit_slave_y")
+        self.lineEdit_slave_y.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_y, 2, 3, 1, 1)
+
+        self.label_slave_z = QLabel(self.groupBox_2)
+        self.label_slave_z.setObjectName(u"label_slave_z")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_z, 3, 2, 1, 1)
+
+        self.lineEdit_slave_z = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_z.setObjectName(u"lineEdit_slave_z")
+        self.lineEdit_slave_z.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_z, 3, 3, 1, 1)
+
+        self.label_slave_a = QLabel(self.groupBox_2)
+        self.label_slave_a.setObjectName(u"label_slave_a")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_a, 4, 2, 1, 1)
+
+        self.lineEdit_slave_a = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_a.setObjectName(u"lineEdit_slave_a")
+        self.lineEdit_slave_a.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_a, 4, 3, 1, 1)
+
+        self.label_slave_b = QLabel(self.groupBox_2)
+        self.label_slave_b.setObjectName(u"label_slave_b")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_b, 5, 2, 1, 1)
+
+        self.lineEdit_slave_b = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_b.setObjectName(u"lineEdit_slave_b")
+        self.lineEdit_slave_b.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_b, 5, 3, 1, 1)
+
+        self.label_slave_c = QLabel(self.groupBox_2)
+        self.label_slave_c.setObjectName(u"label_slave_c")
+
+        self.gridLayout_slave_telemetry.addWidget(self.label_slave_c, 6, 2, 1, 1)
+
+        self.lineEdit_slave_c = QLineEdit(self.groupBox_2)
+        self.lineEdit_slave_c.setObjectName(u"lineEdit_slave_c")
+        self.lineEdit_slave_c.setReadOnly(True)
+
+        self.gridLayout_slave_telemetry.addWidget(self.lineEdit_slave_c, 6, 3, 1, 1)
+
+        self.gridLayout_slave_telemetry.setColumnStretch(1, 1)
+        self.gridLayout_slave_telemetry.setColumnStretch(3, 1)
+
+        self.verticalLayout_groupBox_2.addLayout(self.gridLayout_slave_telemetry)
+
+        self.spacer_groupBox_2 = QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_groupBox_2.addItem(self.spacer_groupBox_2)
+
+
+        self.horizontalLayout_robotset.addWidget(self.groupBox_2)
+
+        self.horizontalLayout_robotset.setStretch(0, 1)
+        self.horizontalLayout_robotset.setStretch(1, 1)
         self.tabWidget_settings.addTab(self.tab_robotset, "")
         self.tab_cameraset = QWidget()
         self.tab_cameraset.setObjectName(u"tab_cameraset")
@@ -234,7 +564,7 @@ class Ui_SettingsDialog(object):
 
         self.retranslateUi(SettingsDialog)
 
-        self.tabWidget_settings.setCurrentIndex(2)
+        self.tabWidget_settings.setCurrentIndex(0)
 
 
         QMetaObject.connectSlotsByName(SettingsDialog)
@@ -243,14 +573,50 @@ class Ui_SettingsDialog(object):
     def retranslateUi(self, SettingsDialog):
         SettingsDialog.setWindowTitle(QCoreApplication.translate("SettingsDialog", u"Setting", None))
         self.groupBox.setTitle(QCoreApplication.translate("SettingsDialog", u"MasterRobot", None))
+        self.label_master_joint_header.setText(QCoreApplication.translate("SettingsDialog", u"\u5173\u8282\u89d2\u5ea6 (\u00b0)", None))
+        self.label_master_tcp_header.setText(QCoreApplication.translate("SettingsDialog", u"TCP \u4f4d\u59ff", None))
+        self.label_master_joint0.setText(QCoreApplication.translate("SettingsDialog", u"joint0", None))
+        self.label_master_joint1.setText(QCoreApplication.translate("SettingsDialog", u"joint1", None))
+        self.label_master_joint2.setText(QCoreApplication.translate("SettingsDialog", u"joint2", None))
+        self.label_master_joint3.setText(QCoreApplication.translate("SettingsDialog", u"joint3", None))
+        self.label_master_joint4.setText(QCoreApplication.translate("SettingsDialog", u"joint4", None))
+        self.label_master_joint5.setText(QCoreApplication.translate("SettingsDialog", u"joint5", None))
+        self.label_master_joint6.setText(QCoreApplication.translate("SettingsDialog", u"joint6", None))
+        self.label_master_x.setText(QCoreApplication.translate("SettingsDialog", u"x (mm)", None))
+        self.lineEdit_master_x.setText(QCoreApplication.translate("SettingsDialog", u"\u2014", None))
+        self.label_master_y.setText(QCoreApplication.translate("SettingsDialog", u"y (mm)", None))
+        self.lineEdit_master_y.setText(QCoreApplication.translate("SettingsDialog", u"\u2014", None))
+        self.label_master_z.setText(QCoreApplication.translate("SettingsDialog", u"z (mm)", None))
+        self.lineEdit_master_z.setText(QCoreApplication.translate("SettingsDialog", u"\u2014", None))
+        self.label_master_a.setText(QCoreApplication.translate("SettingsDialog", u"a (rad)", None))
+        self.lineEdit_master_a.setText(QCoreApplication.translate("SettingsDialog", u"\u2014", None))
+        self.label_master_b.setText(QCoreApplication.translate("SettingsDialog", u"b (rad)", None))
+        self.lineEdit_master_b.setText(QCoreApplication.translate("SettingsDialog", u"\u2014", None))
+        self.label_master_c.setText(QCoreApplication.translate("SettingsDialog", u"c (rad)", None))
+        self.lineEdit_master_c.setText(QCoreApplication.translate("SettingsDialog", u"\u2014", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("SettingsDialog", u"SlaveRobot", None))
-        self.label.setText(QCoreApplication.translate("SettingsDialog", u"Vel(\u00b0/s)", None))
-        self.label_2.setText(QCoreApplication.translate("SettingsDialog", u"Acc\u00b0/s^2", None))
-        self.label_3.setText(QCoreApplication.translate("SettingsDialog", u"Jerk\u00b0/s^3", None))
+        self.label_slave_arm_vel.setText(QCoreApplication.translate("SettingsDialog", u"Vel (\u00b0/s)", None))
         self.lineEdit_slave_arm_vel.setText(QCoreApplication.translate("SettingsDialog", u"80", None))
+        self.label_slave_arm_acc.setText(QCoreApplication.translate("SettingsDialog", u"Acc (\u00b0/s\u00b2)", None))
         self.lineEdit_slave_arm_acc.setText(QCoreApplication.translate("SettingsDialog", u"1000", None))
+        self.label_slave_arm_jerk.setText(QCoreApplication.translate("SettingsDialog", u"Jerk (\u00b0/s\u00b3)", None))
         self.lineEdit_slave_arm_jerk.setText(QCoreApplication.translate("SettingsDialog", u"1000", None))
         self.pushButton_save_slave_param.setText(QCoreApplication.translate("SettingsDialog", u"Save", None))
+        self.label_slave_joint_header.setText(QCoreApplication.translate("SettingsDialog", u"\u5173\u8282\u89d2\u5ea6 (\u00b0)", None))
+        self.label_slave_tcp_header.setText(QCoreApplication.translate("SettingsDialog", u"TCP \u4f4d\u59ff", None))
+        self.label_slave_joint0.setText(QCoreApplication.translate("SettingsDialog", u"joint0", None))
+        self.label_slave_joint1.setText(QCoreApplication.translate("SettingsDialog", u"joint1", None))
+        self.label_slave_joint2.setText(QCoreApplication.translate("SettingsDialog", u"joint2", None))
+        self.label_slave_joint3.setText(QCoreApplication.translate("SettingsDialog", u"joint3", None))
+        self.label_slave_joint4.setText(QCoreApplication.translate("SettingsDialog", u"joint4", None))
+        self.label_slave_joint5.setText(QCoreApplication.translate("SettingsDialog", u"joint5", None))
+        self.label_slave_joint6.setText(QCoreApplication.translate("SettingsDialog", u"joint6", None))
+        self.label_slave_x.setText(QCoreApplication.translate("SettingsDialog", u"x (mm)", None))
+        self.label_slave_y.setText(QCoreApplication.translate("SettingsDialog", u"y (mm)", None))
+        self.label_slave_z.setText(QCoreApplication.translate("SettingsDialog", u"z (mm)", None))
+        self.label_slave_a.setText(QCoreApplication.translate("SettingsDialog", u"a (rad)", None))
+        self.label_slave_b.setText(QCoreApplication.translate("SettingsDialog", u"b (rad)", None))
+        self.label_slave_c.setText(QCoreApplication.translate("SettingsDialog", u"c (rad)", None))
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_robotset), QCoreApplication.translate("SettingsDialog", u"Robot Set", None))
         self.label_camera.setText(QCoreApplication.translate("SettingsDialog", u"\u76f8\u673a\u8bbe\u7f6e", None))
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_cameraset), QCoreApplication.translate("SettingsDialog", u"Camera Set", None))
