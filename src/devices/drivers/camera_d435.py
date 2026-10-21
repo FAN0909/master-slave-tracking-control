@@ -12,6 +12,10 @@ class CameraD435(BaseCamera):
         super().__init__(name)
         self.camera_manager = RealSenseManager()
 
+    def list_devices(self) -> list[tuple[str, str]]:
+        """Return available RealSense devices as (name, serial number) pairs."""
+        return self.camera_manager.list_devices()
+
     def Connect(self) -> bool:
         if self.is_connected:
             return True

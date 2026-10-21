@@ -8,6 +8,7 @@ from src.ui.main_window import Ui_MainWindow
 from src.ui.settings_dialog import SettingsDialog
 from src.ui.log_stream import Logger
 from src.devices.drivers_factory import create_master_arm
+from src.devices.drivers_factory import create_camera
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
 from src.threads.hand_thread import HandThread
@@ -73,6 +74,7 @@ class MainWindow(QMainWindow):
         self.if_start_follow = False
 
         self.init_ui_state()
+        self.init_camera_ui()
 
         self.init_thread()
 
@@ -83,7 +85,7 @@ class MainWindow(QMainWindow):
         self._log_timer = QTimer(self)
         self._log_timer.timeout.connect(self.flush_log)
         self._log_timer.start(100)
-        Logger.instance().info("日志窗口已就绪")
+        Logger.instance().info("Activity log is ready")
 
     def clear_log(self):
         self.logger.clear()
@@ -123,16 +125,57 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
   
         #test
+#region========================================camera====================================================
+    def init_camera_ui(self):
+        self.ui.pushButton_camera_refresh.clicked.connect(self.on_camera_refresh_clicked)
+
+    def on_camera_refresh_clicked(self):
+        model = self.ui.comboBox_camera_model.currentText().strip()
+        camera_type = {"RealSenseD435": "D435"}.get(model, model)
+        combos = (
+            self.ui.comboBox_camera_device_side,
+            self.ui.comboBox_camera_device_front,
+            self.ui.comboBox_camera_device_hand,
+        )
+        selected_serials = [combo.currentData() for combo in combos]
+        for combo in combos:
+            combo.clear()
+
+        try:
+            devices = create_camera(camera_type).list_devices()
+        except Exception as error:
+            for combo in combos:
+                combo.setPlaceholderText("Refresh failed")
+            message = f"Failed to refresh {model} devices: {error}"
+            Logger.instance().error(message)
+            self.ui.statusbar.showMessage(message)
+            return
+
+        for index, (combo, selected_serial) in enumerate(zip(combos, selected_serials)):
+            combo.setPlaceholderText("No devices found")
+            for name, serial in devices:
+                combo.addItem(f"{name} ({serial})", serial)
+            previous_index = combo.findData(selected_serial) if selected_serial else -1
+            if previous_index >= 0:
+                combo.setCurrentIndex(previous_index)
+            elif index < len(devices):
+                combo.setCurrentIndex(index)
+
+        message = f"Found {len(devices)} {model} device(s)"
+        Logger.instance().info(message)
+        self.ui.statusbar.showMessage(message)
+        
+#endregion========================================camera====================================================
 
     @staticmethod
     def _set_arm_status(label, state, message=""):
         labels = {
-            "disconnected": "● 未连接",
-            "connecting": "● 连接中",
-            "disconnecting": "● 断开中",
-            "connected": "● 已连接",
-            "failed": "● 连接失败",
-            "disconnect_failed": "● 断开失败",
+            "disconnected": "● Disconnected",
+            "connecting": "● Connecting",
+            "disconnecting": "● Disconnecting",
+            "connected": "● Connected",
+            "failed": "● Connection failed",
+            "disconnect_failed": "● Disconnection failed",
         }
         label.setText(labels[state])
         label.setToolTip(message)
@@ -235,7 +278,7 @@ class MainWindow(QMainWindow):
             if index >= 0:
                 combo.setCurrentIndex(index)
         except Exception as e:
-            Logger.instance().error(f"[LinkHand] 刷新通信端口失败: {e}")
+            Logger.instance().error(f"[LinkHand] Failed to refresh communication ports: {e}")
 
     def on_pushButton_hand_connect_clicked(self):
         if self.if_hand_connected:
@@ -264,13 +307,13 @@ class MainWindow(QMainWindow):
 
     def on_pushButton_start_follow_clicked(self):
         if self.if_master_connected is False or self.if_slave_connected is False:
-            Logger.instance().info("请先连接arm")
+            Logger.instance().info("Connect the master and slave arms first")
             return
         if self.if_slave_power_on is False:
-            Logger.instance().info("请先使能从手")
+            Logger.instance().info("Enable the slave arm first")
             return
         if self.if_hand_connected is False:
-            Logger.instance().info("请连接hand")
+            Logger.instance().info("Connect the hand first")
             return
 
         if self.if_start_follow:
@@ -432,7 +475,7 @@ class MainWindow(QMainWindow):
             self.ui.statusbar.showMessage("Connecting...")
             IP_address = self.ui.lineEdit_slave_arm_ip.text().strip()
             if not IP_address:
-                self._set_arm_status(self.ui.label_slave_status, "failed", "请输入有效的 IP 地址")
+                self._set_arm_status(self.ui.label_slave_status, "failed", "Please enter a valid IP address")
                 self.ui.statusbar.showMessage("Please enter a valid IP address")
                 return
             robot_type = self.ui.comboBox_robot_type.currentText().strip()

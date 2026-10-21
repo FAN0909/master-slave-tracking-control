@@ -11,6 +11,18 @@ class RealSenseManager:
         self.pipeline = None
         self.config = None
 
+    def list_devices(self):
+        if rs is None:
+            raise RuntimeError(
+                "未检测到 pyrealsense2。请先安装 Intel RealSense SDK / Python 包。"
+            )
+
+        return [
+            (device.get_info(rs.camera_info.name),
+             device.get_info(rs.camera_info.serial_number))
+            for device in rs.context().query_devices()
+        ]
+    
     def connect(self):
         if rs is None:
             raise RuntimeError(

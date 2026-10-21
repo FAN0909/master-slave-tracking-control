@@ -35,7 +35,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox_2">
         <property name="title">
-         <string>Master Arm（主机械臂）</string>
+         <string>Master Arm</string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_master_arm" stretch="0,1,0,0,0,0,0">
          <property name="spacing">
@@ -94,7 +94,7 @@
             </size>
            </property>
            <property name="text">
-            <string>● 未连接</string>
+            <string>● Disconnected</string>
            </property>
           </widget>
          </item>
@@ -104,7 +104,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox">
         <property name="title">
-         <string>Slave Arm（从机械臂）</string>
+         <string>Slave Arm</string>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_slave_arm" stretch="0,0,0,1,0,0,0,0,0">
          <property name="spacing">
@@ -188,7 +188,7 @@
             </size>
            </property>
            <property name="text">
-            <string>● 未连接</string>
+            <string>● Disconnected</string>
            </property>
           </widget>
          </item>
@@ -205,7 +205,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox_hand_control">
         <property name="title">
-         <string>灵巧手控制</string>
+         <string>Dexterous Hand Control</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_hand_control">
          <property name="spacing">
@@ -313,7 +313,7 @@
       <item>
        <widget class="QGroupBox" name="groupBox_follow_control">
         <property name="title">
-         <string>跟随控制</string>
+         <string>Follow Control</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_follow_control">
          <property name="spacing">
@@ -324,14 +324,14 @@
            <item>
             <widget class="QPushButton" name="pushButton_start_follow">
              <property name="text">
-              <string>Start follow</string>
+              <string>Start Follow</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QLabel" name="label_follow_interval">
              <property name="text">
-              <string>周期 (ms)</string>
+              <string>Interval (ms)</string>
              </property>
             </widget>
            </item>
@@ -369,7 +369,7 @@
     <item>
      <widget class="QGroupBox" name="groupBox_camera_monitor">
       <property name="title">
-       <string>相机监控（3 路实时画面）</string>
+       <string>Camera Monitoring (3 Live Feeds)</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_camera_monitor" stretch="0,1">
        <property name="spacing">
@@ -380,7 +380,7 @@
          <item>
           <widget class="QLabel" name="label_camera_monitor_hint">
            <property name="text">
-            <string>设备连接与画面预览</string>
+            <string>Device Connections and Preview</string>
            </property>
           </widget>
          </item>
@@ -398,32 +398,48 @@
           </spacer>
          </item>
          <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Model</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="comboBox_camera_model">
+           <item>
+            <property name="text">
+             <string>RealSenseD435</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="pushButton_camera_refresh">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="text">
-            <string>刷新设备</string>
+            <string>Refresh Devices List</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="pushButton_camera_connect_all">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="text">
-            <string>一键连接全部</string>
+            <string>Connect All</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="pushButton_camera_disconnect_all">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="text">
-            <string>一键断开全部</string>
+            <string>Disconnect All</string>
            </property>
           </widget>
          </item>
@@ -437,7 +453,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_camera_1">
            <property name="title">
-            <string>相机 1（左视角）</string>
+            <string>Camera 1 (Side View)</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_camera_1" stretch="0,1">
             <property name="spacing">
@@ -448,33 +464,28 @@
               <item>
                <widget class="QLabel" name="label_camera_device_1">
                 <property name="text">
-                 <string>设备</string>
+                 <string>Device</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_camera_device_1">
-                <item>
-                 <property name="text">
-                  <string>Camera 0</string>
-                 </property>
-                </item>
+               <widget class="QComboBox" name="comboBox_camera_device_side">
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pushButton_camera_connect_1">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="text">
-                 <string>连接</string>
+                 <string>Connect</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QLabel" name="label_camera_status_1">
                 <property name="text">
-                 <string>● 未连接</string>
+                 <string>● Disconnected</string>
                 </property>
                </widget>
               </item>
@@ -502,7 +513,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_camera_2">
            <property name="title">
-            <string>相机 2（正视角）</string>
+            <string>Camera 2 (Front View)</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_camera_2" stretch="0,1">
             <property name="spacing">
@@ -513,33 +524,28 @@
               <item>
                <widget class="QLabel" name="label_camera_device_2">
                 <property name="text">
-                 <string>设备</string>
+                 <string>Device</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_camera_device_2">
-                <item>
-                 <property name="text">
-                  <string>Camera 1</string>
-                 </property>
-                </item>
+               <widget class="QComboBox" name="comboBox_camera_device_front">
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pushButton_camera_connect_2">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="text">
-                 <string>连接</string>
+                 <string>Connect</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QLabel" name="label_camera_status_2">
                 <property name="text">
-                 <string>● 未连接</string>
+                 <string>● Disconnected</string>
                 </property>
                </widget>
               </item>
@@ -567,7 +573,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_camera_3">
            <property name="title">
-            <string>相机 3（右视角）</string>
+            <string>Camera 3 (Hand)</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_camera_3" stretch="0,1">
             <property name="spacing">
@@ -578,33 +584,28 @@
               <item>
                <widget class="QLabel" name="label_camera_device_3">
                 <property name="text">
-                 <string>设备</string>
+                 <string>Device</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_camera_device_3">
-                <item>
-                 <property name="text">
-                  <string>Camera 2</string>
-                 </property>
-                </item>
+               <widget class="QComboBox" name="comboBox_camera_device_hand">
                </widget>
               </item>
               <item>
                <widget class="QPushButton" name="pushButton_camera_connect_3">
                 <property name="enabled">
-                 <bool>false</bool>
+                 <bool>true</bool>
                 </property>
                 <property name="text">
-                 <string>连接</string>
+                 <string>Connect</string>
                 </property>
                </widget>
               </item>
               <item>
                <widget class="QLabel" name="label_camera_status_3">
                 <property name="text">
-                 <string>● 未连接</string>
+                 <string>● Disconnected</string>
                 </property>
                </widget>
               </item>
@@ -643,7 +644,7 @@
        </size>
       </property>
       <property name="title">
-       <string>运行日志</string>
+       <string>Activity Log</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
@@ -664,7 +665,7 @@
          <item>
           <widget class="QCheckBox" name="checkBox_log_autoscroll">
            <property name="text">
-            <string>自动滚动</string>
+            <string>Auto Scroll</string>
            </property>
            <property name="checked">
             <bool>true</bool>
@@ -674,7 +675,7 @@
          <item>
           <widget class="QPushButton" name="pushButton_clear_log">
            <property name="text">
-            <string>清空日志</string>
+            <string>Clear Log</string>
            </property>
           </widget>
          </item>
@@ -698,7 +699,7 @@
           <number>2000</number>
          </property>
          <property name="placeholderText">
-          <string>运行日志将显示在这里…</string>
+          <string>Activity logs will appear here...</string>
          </property>
         </widget>
        </item>

@@ -283,21 +283,32 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_camera_toolbar.addItem(self.horizontalSpacer_camera_toolbar)
 
+        self.label = QLabel(self.groupBox_camera_monitor)
+        self.label.setObjectName(u"label")
+
+        self.horizontalLayout_camera_toolbar.addWidget(self.label)
+
+        self.comboBox_camera_model = QComboBox(self.groupBox_camera_monitor)
+        self.comboBox_camera_model.addItem("")
+        self.comboBox_camera_model.setObjectName(u"comboBox_camera_model")
+
+        self.horizontalLayout_camera_toolbar.addWidget(self.comboBox_camera_model)
+
         self.pushButton_camera_refresh = QPushButton(self.groupBox_camera_monitor)
         self.pushButton_camera_refresh.setObjectName(u"pushButton_camera_refresh")
-        self.pushButton_camera_refresh.setEnabled(False)
+        self.pushButton_camera_refresh.setEnabled(True)
 
         self.horizontalLayout_camera_toolbar.addWidget(self.pushButton_camera_refresh)
 
         self.pushButton_camera_connect_all = QPushButton(self.groupBox_camera_monitor)
         self.pushButton_camera_connect_all.setObjectName(u"pushButton_camera_connect_all")
-        self.pushButton_camera_connect_all.setEnabled(False)
+        self.pushButton_camera_connect_all.setEnabled(True)
 
         self.horizontalLayout_camera_toolbar.addWidget(self.pushButton_camera_connect_all)
 
         self.pushButton_camera_disconnect_all = QPushButton(self.groupBox_camera_monitor)
         self.pushButton_camera_disconnect_all.setObjectName(u"pushButton_camera_disconnect_all")
-        self.pushButton_camera_disconnect_all.setEnabled(False)
+        self.pushButton_camera_disconnect_all.setEnabled(True)
 
         self.horizontalLayout_camera_toolbar.addWidget(self.pushButton_camera_disconnect_all)
 
@@ -319,15 +330,14 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_camera_controls_1.addWidget(self.label_camera_device_1)
 
-        self.comboBox_camera_device_1 = QComboBox(self.groupBox_camera_1)
-        self.comboBox_camera_device_1.addItem("")
-        self.comboBox_camera_device_1.setObjectName(u"comboBox_camera_device_1")
+        self.comboBox_camera_device_side = QComboBox(self.groupBox_camera_1)
+        self.comboBox_camera_device_side.setObjectName(u"comboBox_camera_device_side")
 
-        self.horizontalLayout_camera_controls_1.addWidget(self.comboBox_camera_device_1)
+        self.horizontalLayout_camera_controls_1.addWidget(self.comboBox_camera_device_side)
 
         self.pushButton_camera_connect_1 = QPushButton(self.groupBox_camera_1)
         self.pushButton_camera_connect_1.setObjectName(u"pushButton_camera_connect_1")
-        self.pushButton_camera_connect_1.setEnabled(False)
+        self.pushButton_camera_connect_1.setEnabled(True)
 
         self.horizontalLayout_camera_controls_1.addWidget(self.pushButton_camera_connect_1)
 
@@ -362,15 +372,14 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_camera_controls_2.addWidget(self.label_camera_device_2)
 
-        self.comboBox_camera_device_2 = QComboBox(self.groupBox_camera_2)
-        self.comboBox_camera_device_2.addItem("")
-        self.comboBox_camera_device_2.setObjectName(u"comboBox_camera_device_2")
+        self.comboBox_camera_device_front = QComboBox(self.groupBox_camera_2)
+        self.comboBox_camera_device_front.setObjectName(u"comboBox_camera_device_front")
 
-        self.horizontalLayout_camera_controls_2.addWidget(self.comboBox_camera_device_2)
+        self.horizontalLayout_camera_controls_2.addWidget(self.comboBox_camera_device_front)
 
         self.pushButton_camera_connect_2 = QPushButton(self.groupBox_camera_2)
         self.pushButton_camera_connect_2.setObjectName(u"pushButton_camera_connect_2")
-        self.pushButton_camera_connect_2.setEnabled(False)
+        self.pushButton_camera_connect_2.setEnabled(True)
 
         self.horizontalLayout_camera_controls_2.addWidget(self.pushButton_camera_connect_2)
 
@@ -405,15 +414,14 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_camera_controls_3.addWidget(self.label_camera_device_3)
 
-        self.comboBox_camera_device_3 = QComboBox(self.groupBox_camera_3)
-        self.comboBox_camera_device_3.addItem("")
-        self.comboBox_camera_device_3.setObjectName(u"comboBox_camera_device_3")
+        self.comboBox_camera_device_hand = QComboBox(self.groupBox_camera_3)
+        self.comboBox_camera_device_hand.setObjectName(u"comboBox_camera_device_hand")
 
-        self.horizontalLayout_camera_controls_3.addWidget(self.comboBox_camera_device_3)
+        self.horizontalLayout_camera_controls_3.addWidget(self.comboBox_camera_device_hand)
 
         self.pushButton_camera_connect_3 = QPushButton(self.groupBox_camera_3)
         self.pushButton_camera_connect_3.setObjectName(u"pushButton_camera_connect_3")
-        self.pushButton_camera_connect_3.setEnabled(False)
+        self.pushButton_camera_connect_3.setEnabled(True)
 
         self.horizontalLayout_camera_controls_3.addWidget(self.pushButton_camera_connect_3)
 
@@ -504,14 +512,14 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.menuSet_Param.setText(QCoreApplication.translate("MainWindow", u"Set Param", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Master Arm\uff08\u4e3b\u673a\u68b0\u81c2\uff09", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Master Arm", None))
         self.label_31.setText(QCoreApplication.translate("MainWindow", u"port", None))
         self.pushButton_refresh_master_port.setText(QCoreApplication.translate("MainWindow", u"Refresh Port", None))
         self.label_38.setText(QCoreApplication.translate("MainWindow", u"Hz(ms)", None))
         self.lineEdit_master_read_pos_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
         self.pushButton_connect_master_arm.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
-        self.label_master_status.setText(QCoreApplication.translate("MainWindow", u"\u25cf \u672a\u8fde\u63a5", None))
-        self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"Slave Arm\uff08\u4ece\u673a\u68b0\u81c2\uff09", None))
+        self.label_master_status.setText(QCoreApplication.translate("MainWindow", u"\u25cf Disconnected", None))
+        self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"Slave Arm", None))
         self.label_32.setText(QCoreApplication.translate("MainWindow", u"Model", None))
         self.comboBox_robot_type.setItemText(0, QCoreApplication.translate("MainWindow", u"NRC", None))
         self.comboBox_robot_type.setItemText(1, QCoreApplication.translate("MainWindow", u"Dobot_Cr3", None))
@@ -522,8 +530,8 @@ class Ui_MainWindow(object):
         self.lineEdit_slave_read_pos_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
         self.Btn_robot_connect.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
         self.pushButton_robot_PowerOn.setText(QCoreApplication.translate("MainWindow", u"PowerOn", None))
-        self.label_slave_status.setText(QCoreApplication.translate("MainWindow", u"\u25cf \u672a\u8fde\u63a5", None))
-        self.groupBox_hand_control.setTitle(QCoreApplication.translate("MainWindow", u"\u7075\u5de7\u624b\u63a7\u5236", None))
+        self.label_slave_status.setText(QCoreApplication.translate("MainWindow", u"\u25cf Disconnected", None))
+        self.groupBox_hand_control.setTitle(QCoreApplication.translate("MainWindow", u"Dexterous Hand Control", None))
         self.pushButton_connect_hand.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
         self.label_34.setText(QCoreApplication.translate("MainWindow", u"Type", None))
         self.comboBox_hand_comm_type.setItemText(0, QCoreApplication.translate("MainWindow", u"Modebus", None))
@@ -539,41 +547,38 @@ class Ui_MainWindow(object):
         self.comboBox_hand_model.setItemText(0, QCoreApplication.translate("MainWindow", u"LinkerO6", None))
 
         self.label_37.setText(QCoreApplication.translate("MainWindow", u"\u8fd9\u91cc\u6ce8\u610f \u5982\u679c\u662fubuntu\u4e0b\u7528can  \u9700\u8981\u5728\u914d\u7f6e\u6587\u4ef6\u4e2d\u5199\u5165root\u5bc6\u7801", None))
-        self.groupBox_follow_control.setTitle(QCoreApplication.translate("MainWindow", u"\u8ddf\u968f\u63a7\u5236", None))
-        self.pushButton_start_follow.setText(QCoreApplication.translate("MainWindow", u"Start follow", None))
-        self.label_follow_interval.setText(QCoreApplication.translate("MainWindow", u"\u5468\u671f (ms)", None))
+        self.groupBox_follow_control.setTitle(QCoreApplication.translate("MainWindow", u"Follow Control", None))
+        self.pushButton_start_follow.setText(QCoreApplication.translate("MainWindow", u"Start Follow", None))
+        self.label_follow_interval.setText(QCoreApplication.translate("MainWindow", u"Interval (ms)", None))
         self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
         self.label_follow_hint.setText(QCoreApplication.translate("MainWindow", u"\u8fde\u63a5\u4e3b\u624b\u3001\u4ece\u624b\u548c\u7075\u5de7\u624b\u540e\u53ef\u542f\u52a8\u8ddf\u968f", None))
         self.label_follow_spacer.setText("")
-        self.groupBox_camera_monitor.setTitle(QCoreApplication.translate("MainWindow", u"\u76f8\u673a\u76d1\u63a7\uff083 \u8def\u5b9e\u65f6\u753b\u9762\uff09", None))
-        self.label_camera_monitor_hint.setText(QCoreApplication.translate("MainWindow", u"\u8bbe\u5907\u8fde\u63a5\u4e0e\u753b\u9762\u9884\u89c8", None))
-        self.pushButton_camera_refresh.setText(QCoreApplication.translate("MainWindow", u"\u5237\u65b0\u8bbe\u5907", None))
-        self.pushButton_camera_connect_all.setText(QCoreApplication.translate("MainWindow", u"\u4e00\u952e\u8fde\u63a5\u5168\u90e8", None))
-        self.pushButton_camera_disconnect_all.setText(QCoreApplication.translate("MainWindow", u"\u4e00\u952e\u65ad\u5f00\u5168\u90e8", None))
-        self.groupBox_camera_1.setTitle(QCoreApplication.translate("MainWindow", u"\u76f8\u673a 1\uff08\u5de6\u89c6\u89d2\uff09", None))
-        self.label_camera_device_1.setText(QCoreApplication.translate("MainWindow", u"\u8bbe\u5907", None))
-        self.comboBox_camera_device_1.setItemText(0, QCoreApplication.translate("MainWindow", u"Camera 0", None))
+        self.groupBox_camera_monitor.setTitle(QCoreApplication.translate("MainWindow", u"Camera Monitoring (3 Live Feeds)", None))
+        self.label_camera_monitor_hint.setText(QCoreApplication.translate("MainWindow", u"Device Connections and Preview", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"Model", None))
+        self.comboBox_camera_model.setItemText(0, QCoreApplication.translate("MainWindow", u"RealSenseD435", None))
 
-        self.pushButton_camera_connect_1.setText(QCoreApplication.translate("MainWindow", u"\u8fde\u63a5", None))
-        self.label_camera_status_1.setText(QCoreApplication.translate("MainWindow", u"\u25cf \u672a\u8fde\u63a5", None))
+        self.pushButton_camera_refresh.setText(QCoreApplication.translate("MainWindow", u"Refresh Devices List", None))
+        self.pushButton_camera_connect_all.setText(QCoreApplication.translate("MainWindow", u"Connect All", None))
+        self.pushButton_camera_disconnect_all.setText(QCoreApplication.translate("MainWindow", u"Disconnect All", None))
+        self.groupBox_camera_1.setTitle(QCoreApplication.translate("MainWindow", u"Camera 1 (Side View)", None))
+        self.label_camera_device_1.setText(QCoreApplication.translate("MainWindow", u"Device", None))
+        self.pushButton_camera_connect_1.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.label_camera_status_1.setText(QCoreApplication.translate("MainWindow", u"\u25cf Disconnected", None))
         self.label_camera_preview_1.setText("")
-        self.groupBox_camera_2.setTitle(QCoreApplication.translate("MainWindow", u"\u76f8\u673a 2\uff08\u6b63\u89c6\u89d2\uff09", None))
-        self.label_camera_device_2.setText(QCoreApplication.translate("MainWindow", u"\u8bbe\u5907", None))
-        self.comboBox_camera_device_2.setItemText(0, QCoreApplication.translate("MainWindow", u"Camera 1", None))
-
-        self.pushButton_camera_connect_2.setText(QCoreApplication.translate("MainWindow", u"\u8fde\u63a5", None))
-        self.label_camera_status_2.setText(QCoreApplication.translate("MainWindow", u"\u25cf \u672a\u8fde\u63a5", None))
+        self.groupBox_camera_2.setTitle(QCoreApplication.translate("MainWindow", u"Camera 2 (Front View)", None))
+        self.label_camera_device_2.setText(QCoreApplication.translate("MainWindow", u"Device", None))
+        self.pushButton_camera_connect_2.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.label_camera_status_2.setText(QCoreApplication.translate("MainWindow", u"\u25cf Disconnected", None))
         self.label_camera_preview_2.setText("")
-        self.groupBox_camera_3.setTitle(QCoreApplication.translate("MainWindow", u"\u76f8\u673a 3\uff08\u53f3\u89c6\u89d2\uff09", None))
-        self.label_camera_device_3.setText(QCoreApplication.translate("MainWindow", u"\u8bbe\u5907", None))
-        self.comboBox_camera_device_3.setItemText(0, QCoreApplication.translate("MainWindow", u"Camera 2", None))
-
-        self.pushButton_camera_connect_3.setText(QCoreApplication.translate("MainWindow", u"\u8fde\u63a5", None))
-        self.label_camera_status_3.setText(QCoreApplication.translate("MainWindow", u"\u25cf \u672a\u8fde\u63a5", None))
+        self.groupBox_camera_3.setTitle(QCoreApplication.translate("MainWindow", u"Camera 3 (Hand)", None))
+        self.label_camera_device_3.setText(QCoreApplication.translate("MainWindow", u"Device", None))
+        self.pushButton_camera_connect_3.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.label_camera_status_3.setText(QCoreApplication.translate("MainWindow", u"\u25cf Disconnected", None))
         self.label_camera_preview_3.setText("")
-        self.groupBox_log.setTitle(QCoreApplication.translate("MainWindow", u"\u8fd0\u884c\u65e5\u5fd7", None))
-        self.checkBox_log_autoscroll.setText(QCoreApplication.translate("MainWindow", u"\u81ea\u52a8\u6eda\u52a8", None))
-        self.pushButton_clear_log.setText(QCoreApplication.translate("MainWindow", u"\u6e05\u7a7a\u65e5\u5fd7", None))
-        self.plainTextEdit_log.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u8fd0\u884c\u65e5\u5fd7\u5c06\u663e\u793a\u5728\u8fd9\u91cc\u2026", None))
+        self.groupBox_log.setTitle(QCoreApplication.translate("MainWindow", u"Activity Log", None))
+        self.checkBox_log_autoscroll.setText(QCoreApplication.translate("MainWindow", u"Auto Scroll", None))
+        self.pushButton_clear_log.setText(QCoreApplication.translate("MainWindow", u"Clear Log", None))
+        self.plainTextEdit_log.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Activity logs will appear here...", None))
     # retranslateUi
 
