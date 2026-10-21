@@ -8,8 +8,9 @@ from vendor.realsense.realsense_manager import RealSenseManager
 class CameraD435(BaseCamera):
     """Intel RealSense D435 彩色相机驱动。"""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, serial_number: str | None = None):
         super().__init__(name)
+        self.serial_number = serial_number
         self.camera_manager = RealSenseManager()
 
     def list_devices(self) -> list[tuple[str, str]]:
@@ -20,7 +21,7 @@ class CameraD435(BaseCamera):
         if self.is_connected:
             return True
         try:
-            self.camera_manager.connect()
+            self.camera_manager.connect(self.serial_number)
             self.is_connected = self.camera_manager.is_connected()
             if not self.is_connected:
                 Logger.instance().error(f"[{self.name}] connect failed: camera is not connected")

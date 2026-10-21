@@ -414,6 +414,26 @@
           </widget>
          </item>
          <item>
+          <widget class="QLabel" name="label_camera_frame_interval">
+           <property name="text">
+            <string>Interval (ms)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_camera_frame_interval">
+           <property name="maximumSize">
+            <size>
+             <width>65</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>20</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="pushButton_camera_refresh">
            <property name="enabled">
             <bool>true</bool>
@@ -470,10 +490,15 @@
               </item>
               <item>
                <widget class="QComboBox" name="comboBox_camera_device_side">
+                <item>
+                 <property name="text">
+                  <string>Camera 0</string>
+                 </property>
+                </item>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton_camera_connect_1">
+               <widget class="QPushButton" name="pushButton_connect_side_camera">
                 <property name="enabled">
                  <bool>true</bool>
                 </property>
@@ -530,10 +555,15 @@
               </item>
               <item>
                <widget class="QComboBox" name="comboBox_camera_device_front">
+                <item>
+                 <property name="text">
+                  <string>Camera 1</string>
+                 </property>
+                </item>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton_camera_connect_2">
+               <widget class="QPushButton" name="pushButton_connect__front_camera">
                 <property name="enabled">
                  <bool>true</bool>
                 </property>
@@ -590,10 +620,15 @@
               </item>
               <item>
                <widget class="QComboBox" name="comboBox_camera_device_hand">
+                <item>
+                 <property name="text">
+                  <string>Camera 2</string>
+                 </property>
+                </item>
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="pushButton_camera_connect_3">
+               <widget class="QPushButton" name="pushButton_connect_camera_hand">
                 <property name="enabled">
                  <bool>true</bool>
                 </property>

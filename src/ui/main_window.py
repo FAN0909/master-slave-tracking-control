@@ -294,6 +294,17 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_camera_toolbar.addWidget(self.comboBox_camera_model)
 
+        self.label_camera_frame_interval = QLabel(self.groupBox_camera_monitor)
+        self.label_camera_frame_interval.setObjectName(u"label_camera_frame_interval")
+
+        self.horizontalLayout_camera_toolbar.addWidget(self.label_camera_frame_interval)
+
+        self.lineEdit_camera_frame_interval = QLineEdit(self.groupBox_camera_monitor)
+        self.lineEdit_camera_frame_interval.setObjectName(u"lineEdit_camera_frame_interval")
+        self.lineEdit_camera_frame_interval.setMaximumSize(QSize(65, 16777215))
+
+        self.horizontalLayout_camera_toolbar.addWidget(self.lineEdit_camera_frame_interval)
+
         self.pushButton_camera_refresh = QPushButton(self.groupBox_camera_monitor)
         self.pushButton_camera_refresh.setObjectName(u"pushButton_camera_refresh")
         self.pushButton_camera_refresh.setEnabled(True)
@@ -331,15 +342,16 @@ class Ui_MainWindow(object):
         self.horizontalLayout_camera_controls_1.addWidget(self.label_camera_device_1)
 
         self.comboBox_camera_device_side = QComboBox(self.groupBox_camera_1)
+        self.comboBox_camera_device_side.addItem("")
         self.comboBox_camera_device_side.setObjectName(u"comboBox_camera_device_side")
 
         self.horizontalLayout_camera_controls_1.addWidget(self.comboBox_camera_device_side)
 
-        self.pushButton_camera_connect_1 = QPushButton(self.groupBox_camera_1)
-        self.pushButton_camera_connect_1.setObjectName(u"pushButton_camera_connect_1")
-        self.pushButton_camera_connect_1.setEnabled(True)
+        self.pushButton_connect_side_camera = QPushButton(self.groupBox_camera_1)
+        self.pushButton_connect_side_camera.setObjectName(u"pushButton_connect_side_camera")
+        self.pushButton_connect_side_camera.setEnabled(True)
 
-        self.horizontalLayout_camera_controls_1.addWidget(self.pushButton_camera_connect_1)
+        self.horizontalLayout_camera_controls_1.addWidget(self.pushButton_connect_side_camera)
 
         self.label_camera_status_1 = QLabel(self.groupBox_camera_1)
         self.label_camera_status_1.setObjectName(u"label_camera_status_1")
@@ -373,15 +385,16 @@ class Ui_MainWindow(object):
         self.horizontalLayout_camera_controls_2.addWidget(self.label_camera_device_2)
 
         self.comboBox_camera_device_front = QComboBox(self.groupBox_camera_2)
+        self.comboBox_camera_device_front.addItem("")
         self.comboBox_camera_device_front.setObjectName(u"comboBox_camera_device_front")
 
         self.horizontalLayout_camera_controls_2.addWidget(self.comboBox_camera_device_front)
 
-        self.pushButton_camera_connect_2 = QPushButton(self.groupBox_camera_2)
-        self.pushButton_camera_connect_2.setObjectName(u"pushButton_camera_connect_2")
-        self.pushButton_camera_connect_2.setEnabled(True)
+        self.pushButton_connect__front_camera = QPushButton(self.groupBox_camera_2)
+        self.pushButton_connect__front_camera.setObjectName(u"pushButton_connect__front_camera")
+        self.pushButton_connect__front_camera.setEnabled(True)
 
-        self.horizontalLayout_camera_controls_2.addWidget(self.pushButton_camera_connect_2)
+        self.horizontalLayout_camera_controls_2.addWidget(self.pushButton_connect__front_camera)
 
         self.label_camera_status_2 = QLabel(self.groupBox_camera_2)
         self.label_camera_status_2.setObjectName(u"label_camera_status_2")
@@ -415,15 +428,16 @@ class Ui_MainWindow(object):
         self.horizontalLayout_camera_controls_3.addWidget(self.label_camera_device_3)
 
         self.comboBox_camera_device_hand = QComboBox(self.groupBox_camera_3)
+        self.comboBox_camera_device_hand.addItem("")
         self.comboBox_camera_device_hand.setObjectName(u"comboBox_camera_device_hand")
 
         self.horizontalLayout_camera_controls_3.addWidget(self.comboBox_camera_device_hand)
 
-        self.pushButton_camera_connect_3 = QPushButton(self.groupBox_camera_3)
-        self.pushButton_camera_connect_3.setObjectName(u"pushButton_camera_connect_3")
-        self.pushButton_camera_connect_3.setEnabled(True)
+        self.pushButton_connect_camera_hand = QPushButton(self.groupBox_camera_3)
+        self.pushButton_connect_camera_hand.setObjectName(u"pushButton_connect_camera_hand")
+        self.pushButton_connect_camera_hand.setEnabled(True)
 
-        self.horizontalLayout_camera_controls_3.addWidget(self.pushButton_camera_connect_3)
+        self.horizontalLayout_camera_controls_3.addWidget(self.pushButton_connect_camera_hand)
 
         self.label_camera_status_3 = QLabel(self.groupBox_camera_3)
         self.label_camera_status_3.setObjectName(u"label_camera_status_3")
@@ -558,22 +572,30 @@ class Ui_MainWindow(object):
         self.label.setText(QCoreApplication.translate("MainWindow", u"Model", None))
         self.comboBox_camera_model.setItemText(0, QCoreApplication.translate("MainWindow", u"RealSenseD435", None))
 
+        self.label_camera_frame_interval.setText(QCoreApplication.translate("MainWindow", u"Interval (ms)", None))
+        self.lineEdit_camera_frame_interval.setText(QCoreApplication.translate("MainWindow", u"20", None))
         self.pushButton_camera_refresh.setText(QCoreApplication.translate("MainWindow", u"Refresh Devices List", None))
         self.pushButton_camera_connect_all.setText(QCoreApplication.translate("MainWindow", u"Connect All", None))
         self.pushButton_camera_disconnect_all.setText(QCoreApplication.translate("MainWindow", u"Disconnect All", None))
         self.groupBox_camera_1.setTitle(QCoreApplication.translate("MainWindow", u"Camera 1 (Side View)", None))
         self.label_camera_device_1.setText(QCoreApplication.translate("MainWindow", u"Device", None))
-        self.pushButton_camera_connect_1.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.comboBox_camera_device_side.setItemText(0, QCoreApplication.translate("MainWindow", u"Camera 0", None))
+
+        self.pushButton_connect_side_camera.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
         self.label_camera_status_1.setText(QCoreApplication.translate("MainWindow", u"\u25cf Disconnected", None))
         self.label_camera_preview_1.setText("")
         self.groupBox_camera_2.setTitle(QCoreApplication.translate("MainWindow", u"Camera 2 (Front View)", None))
         self.label_camera_device_2.setText(QCoreApplication.translate("MainWindow", u"Device", None))
-        self.pushButton_camera_connect_2.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.comboBox_camera_device_front.setItemText(0, QCoreApplication.translate("MainWindow", u"Camera 1", None))
+
+        self.pushButton_connect__front_camera.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
         self.label_camera_status_2.setText(QCoreApplication.translate("MainWindow", u"\u25cf Disconnected", None))
         self.label_camera_preview_2.setText("")
         self.groupBox_camera_3.setTitle(QCoreApplication.translate("MainWindow", u"Camera 3 (Hand)", None))
         self.label_camera_device_3.setText(QCoreApplication.translate("MainWindow", u"Device", None))
-        self.pushButton_camera_connect_3.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.comboBox_camera_device_hand.setItemText(0, QCoreApplication.translate("MainWindow", u"Camera 2", None))
+
+        self.pushButton_connect_camera_hand.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
         self.label_camera_status_3.setText(QCoreApplication.translate("MainWindow", u"\u25cf Disconnected", None))
         self.label_camera_preview_3.setText("")
         self.groupBox_log.setTitle(QCoreApplication.translate("MainWindow", u"Activity Log", None))

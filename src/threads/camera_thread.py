@@ -18,27 +18,28 @@ class CameraThread(QObject):
         self.timer_read_frame = QTimer(self)
         self.timer_read_frame.timeout.connect(self.OnTimerTriggeredReadFrame)
 
-    @Slot(str)
-    def ConnectCamera(self, camera_type: str) -> bool:
+    @Slot(str, str, int)
+    def ConnectCamera(self, camera_type: str, serial_number: str, interval_ms: int) -> bool:
         if self.if_connected:
-            self.sig_connect_result.emit(False, "请先断开相机，再连接设备")
+            self.sig_connect_result.emit(False, "Disconnect this camera before connecting another device")
             return False
 
         try:
-            camera = create_camera(camera_type)
+            camera = create_camera(camera_type, serial_number=serial_number)
             if not camera.Connect():
                 message = f"[{camera.name}] failed to connect"
                 Logger.instance().error(message)
                 self.sig_connect_result.emit(False, message)
                 return False
         except Exception as error:
-            message = f"相机连接失败: {error}"
+            message = f"Camera connection failed: {error}"
             Logger.instance().error(message)
             self.sig_connect_result.emit(False, message)
             return False
 
         self.camera = camera
         self.if_connected = True
+        self.StartTimer(interval_ms)
         message = f"[{camera.name}] connected successfully"
         Logger.instance().info(message)
         self.sig_connect_result.emit(True, message)
@@ -48,7 +49,7 @@ class CameraThread(QObject):
     def Disconnect(self) -> bool:
         self.StopTimer()
         if self.camera is None or not self.if_connected:
-            self.sig_disconnect_result.emit(False, "相机尚未连接")
+            self.sig_disconnect_result.emit(False, "Camera is not connected")
             return False
 
         try:
@@ -71,10 +72,17 @@ class CameraThread(QObject):
         self.sig_disconnect_result.emit(True, message)
         return True
 
+    @Slot()
+    def Shutdown(self):
+        """Release the camera in its own thread before the event loop exits."""
+        self.StopTimer()
+        if self.if_connected:
+            self.Disconnect()
+
     @Slot(int)
     def StartTimer(self, interval_ms: int = 20) -> bool:
         if not self.if_connected:
-            Logger.instance().error("相机尚未连接，无法开始取帧")
+            Logger.instance().error("Camera is not connected; cannot start frame capture")
             return False
         self.timer_read_frame.start(interval_ms if interval_ms > 0 else 20)
         return True

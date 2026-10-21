@@ -2,7 +2,8 @@ import sys
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QLineEdit
-from PySide6.QtCore import QThread, Signal, QTimer
+from PySide6.QtCore import QMetaObject, Qt, QThread, Signal, Slot, QTimer
+from PySide6.QtGui import QImage, QPixmap
 
 from src.ui.main_window import Ui_MainWindow
 from src.ui.settings_dialog import SettingsDialog
@@ -12,6 +13,7 @@ from src.devices.drivers_factory import create_camera
 from src.threads.slave_robot_thread import SlaveRobotThread
 from src.threads.master_robot_thread import MasterRobotThread
 from src.threads.hand_thread import HandThread
+from src.threads.camera_thread import CameraThread
 from serial.tools import list_ports
 from src.shared_data.robot_share_data import RobotSharedMemory
 from src.devices.drivers.Link_hand import LinkHand
@@ -43,6 +45,13 @@ class MainWindow(QMainWindow):
     sig_request_hand_set_joint_positions = Signal(list)
     sig_request_hand_set_speed = Signal(list)
 
+    sig_request_side_camera_connect = Signal(str, str, int)
+    sig_request_side_camera_disconnect = Signal()
+    sig_request_front_camera_connect = Signal(str, str, int)
+    sig_request_front_camera_disconnect = Signal()
+    sig_request_hand_camera_connect = Signal(str, str, int)
+    sig_request_hand_camera_disconnect = Signal()
+
 
     #test
     sig_request_open_servoj = Signal()
@@ -58,7 +67,7 @@ class MainWindow(QMainWindow):
         for label in (self.ui.label_master_status, self.ui.label_slave_status):
             label.setProperty("uiRole", "armStatus")
         for index in range(1, 4):
-            getattr(self.ui, f"label_camera_status_{index}").setProperty("uiRole", "cameraStatus")
+            getattr(self.ui, f"label_camera_status_{index}").setProperty("uiRole", "armStatus")
             getattr(self.ui, f"label_camera_preview_{index}").setProperty("uiRole", "cameraPreview")
         style = STYLE_PATH.read_text(encoding="utf-8")
         self.setStyleSheet(style.replace("__STYLE_DIR__", STYLE_PATH.parent.as_posix()))
@@ -70,6 +79,9 @@ class MainWindow(QMainWindow):
         self.if_slave_connected = False
         self.if_slave_power_on = False
         self.if_hand_connected = False
+        self.if_side_camera_connected = False
+        self.if_front_camera_connected = False
+        self.if_hand_camera_connected = False
 
         self.if_start_follow = False
 
@@ -126,8 +138,245 @@ class MainWindow(QMainWindow):
   
         #test
 #region========================================camera====================================================
+    def init_camera_threads(self):
+        # Side camera
+        self.side_camera_thread = QThread(self)
+        self.side_camera_worker = CameraThread()
+        self.side_camera_worker.moveToThread(self.side_camera_thread)
+        self.side_camera_thread.finished.connect(self.side_camera_worker.deleteLater)
+        self.sig_request_side_camera_connect.connect(self.side_camera_worker.ConnectCamera)
+        self.sig_request_side_camera_disconnect.connect(self.side_camera_worker.Disconnect)
+        self.side_camera_worker.sig_connect_result.connect(self.handle_side_camera_connect_result)
+        self.side_camera_worker.sig_disconnect_result.connect(self.handle_side_camera_disconnect_result)
+        self.side_camera_worker.sig_color_frame.connect(self.handle_side_camera_frame)
+        self.side_camera_thread.start()
+
+        # Front camera
+        self.front_camera_thread = QThread(self)
+        self.front_camera_worker = CameraThread()
+        self.front_camera_worker.moveToThread(self.front_camera_thread)
+        self.front_camera_thread.finished.connect(self.front_camera_worker.deleteLater)
+        self.sig_request_front_camera_connect.connect(self.front_camera_worker.ConnectCamera)
+        self.sig_request_front_camera_disconnect.connect(self.front_camera_worker.Disconnect)
+        self.front_camera_worker.sig_connect_result.connect(self.handle_front_camera_connect_result)
+        self.front_camera_worker.sig_disconnect_result.connect(self.handle_front_camera_disconnect_result)
+        self.front_camera_worker.sig_color_frame.connect(self.handle_front_camera_frame)
+        self.front_camera_thread.start()
+
+        # Hand camera
+        self.hand_camera_thread = QThread(self)
+        self.hand_camera_worker = CameraThread()
+        self.hand_camera_worker.moveToThread(self.hand_camera_thread)
+        self.hand_camera_thread.finished.connect(self.hand_camera_worker.deleteLater)
+        self.sig_request_hand_camera_connect.connect(self.hand_camera_worker.ConnectCamera)
+        self.sig_request_hand_camera_disconnect.connect(self.hand_camera_worker.Disconnect)
+        self.hand_camera_worker.sig_connect_result.connect(self.handle_hand_camera_connect_result)
+        self.hand_camera_worker.sig_disconnect_result.connect(self.handle_hand_camera_disconnect_result)
+        self.hand_camera_worker.sig_color_frame.connect(self.handle_hand_camera_frame)
+        self.hand_camera_thread.start()
+
     def init_camera_ui(self):
+        self._set_arm_status(self.ui.label_camera_status_1, "disconnected")
+        self._set_arm_status(self.ui.label_camera_status_2, "disconnected")
+        self._set_arm_status(self.ui.label_camera_status_3, "disconnected")
         self.ui.pushButton_camera_refresh.clicked.connect(self.on_camera_refresh_clicked)
+        self.ui.pushButton_connect_side_camera.clicked.connect(self.on_side_camera_connect_button_clicked)
+        self.ui.pushButton_connect__front_camera.clicked.connect(self.on_front_camera_connect_button_clicked)
+        self.ui.pushButton_connect_camera_hand.clicked.connect(self.on_hand_camera_connect_button_clicked)
+        self.ui.pushButton_camera_connect_all.clicked.connect(self.on_camera_connect_all_clicked)
+        self.ui.pushButton_camera_disconnect_all.clicked.connect(self.on_camera_disconnect_all_clicked)
+
+    def get_camera_frame_interval(self):
+        try:
+            interval_ms = int(self.ui.lineEdit_camera_frame_interval.text())
+        except ValueError:
+            interval_ms = 0
+        if interval_ms <= 0:
+            self.ui.statusbar.showMessage("Camera interval must be a positive number of milliseconds")
+            return None
+        return interval_ms
+
+    def on_side_camera_connect_button_clicked(self):
+        button = self.ui.pushButton_connect_side_camera
+        if self.if_side_camera_connected:
+            button.setEnabled(False)
+            self._set_arm_status(self.ui.label_camera_status_1, "disconnecting")
+            self.sig_request_side_camera_disconnect.emit()
+            return
+
+        serial = self.ui.comboBox_camera_device_side.currentData()
+        if not serial:
+            self.ui.statusbar.showMessage("Select a side camera device first")
+            return
+        interval_ms = self.get_camera_frame_interval()
+        if interval_ms is None:
+            return
+        model = self.ui.comboBox_camera_model.currentText().strip()
+        camera_type = {"RealSenseD435": "D435"}.get(model, model)
+        button.setEnabled(False)
+        self.ui.comboBox_camera_device_side.setEnabled(False)
+        self._set_arm_status(self.ui.label_camera_status_1, "connecting")
+        self.sig_request_side_camera_connect.emit(camera_type, serial, interval_ms)
+
+    def on_front_camera_connect_button_clicked(self):
+        button = self.ui.pushButton_connect__front_camera
+        if self.if_front_camera_connected:
+            button.setEnabled(False)
+            self._set_arm_status(self.ui.label_camera_status_2, "disconnecting")
+            self.sig_request_front_camera_disconnect.emit()
+            return
+
+        serial = self.ui.comboBox_camera_device_front.currentData()
+        if not serial:
+            self.ui.statusbar.showMessage("Select a front camera device first")
+            return
+        interval_ms = self.get_camera_frame_interval()
+        if interval_ms is None:
+            return
+        model = self.ui.comboBox_camera_model.currentText().strip()
+        camera_type = {"RealSenseD435": "D435"}.get(model, model)
+        button.setEnabled(False)
+        self.ui.comboBox_camera_device_front.setEnabled(False)
+        self._set_arm_status(self.ui.label_camera_status_2, "connecting")
+        self.sig_request_front_camera_connect.emit(camera_type, serial, interval_ms)
+
+    def on_hand_camera_connect_button_clicked(self):
+        button = self.ui.pushButton_connect_camera_hand
+        if self.if_hand_camera_connected:
+            button.setEnabled(False)
+            self._set_arm_status(self.ui.label_camera_status_3, "disconnecting")
+            self.sig_request_hand_camera_disconnect.emit()
+            return
+
+        serial = self.ui.comboBox_camera_device_hand.currentData()
+        if not serial:
+            self.ui.statusbar.showMessage("Select a hand camera device first")
+            return
+        interval_ms = self.get_camera_frame_interval()
+        if interval_ms is None:
+            return
+        model = self.ui.comboBox_camera_model.currentText().strip()
+        camera_type = {"RealSenseD435": "D435"}.get(model, model)
+        button.setEnabled(False)
+        self.ui.comboBox_camera_device_hand.setEnabled(False)
+        self._set_arm_status(self.ui.label_camera_status_3, "connecting")
+        self.sig_request_hand_camera_connect.emit(camera_type, serial, interval_ms)
+
+    def on_camera_connect_all_clicked(self):
+        if not self.if_side_camera_connected and self.ui.pushButton_connect_side_camera.isEnabled():
+            self.on_side_camera_connect_button_clicked()
+        if not self.if_front_camera_connected and self.ui.pushButton_connect__front_camera.isEnabled():
+            self.on_front_camera_connect_button_clicked()
+        if not self.if_hand_camera_connected and self.ui.pushButton_connect_camera_hand.isEnabled():
+            self.on_hand_camera_connect_button_clicked()
+
+    def on_camera_disconnect_all_clicked(self):
+        if self.if_side_camera_connected and self.ui.pushButton_connect_side_camera.isEnabled():
+            self.on_side_camera_connect_button_clicked()
+        if self.if_front_camera_connected and self.ui.pushButton_connect__front_camera.isEnabled():
+            self.on_front_camera_connect_button_clicked()
+        if self.if_hand_camera_connected and self.ui.pushButton_connect_camera_hand.isEnabled():
+            self.on_hand_camera_connect_button_clicked()
+
+    @Slot(bool, str)
+    def handle_side_camera_connect_result(self, success, message):
+        self.ui.pushButton_connect_side_camera.setEnabled(True)
+        self.if_side_camera_connected = success
+        if success:
+            self.ui.pushButton_connect_side_camera.setText("Disconnect")
+            self._set_arm_status(self.ui.label_camera_status_1, "connected", message)
+        else:
+            self.ui.comboBox_camera_device_side.setEnabled(True)
+            self._set_arm_status(self.ui.label_camera_status_1, "failed", message)
+        self.ui.statusbar.showMessage(f"Side camera: {message}")
+
+    @Slot(bool, str)
+    def handle_front_camera_connect_result(self, success, message):
+        self.ui.pushButton_connect__front_camera.setEnabled(True)
+        self.if_front_camera_connected = success
+        if success:
+            self.ui.pushButton_connect__front_camera.setText("Disconnect")
+            self._set_arm_status(self.ui.label_camera_status_2, "connected", message)
+        else:
+            self.ui.comboBox_camera_device_front.setEnabled(True)
+            self._set_arm_status(self.ui.label_camera_status_2, "failed", message)
+        self.ui.statusbar.showMessage(f"Front camera: {message}")
+
+    @Slot(bool, str)
+    def handle_hand_camera_connect_result(self, success, message):
+        self.ui.pushButton_connect_camera_hand.setEnabled(True)
+        self.if_hand_camera_connected = success
+        if success:
+            self.ui.pushButton_connect_camera_hand.setText("Disconnect")
+            self._set_arm_status(self.ui.label_camera_status_3, "connected", message)
+        else:
+            self.ui.comboBox_camera_device_hand.setEnabled(True)
+            self._set_arm_status(self.ui.label_camera_status_3, "failed", message)
+        self.ui.statusbar.showMessage(f"Hand camera: {message}")
+
+    @Slot(bool, str)
+    def handle_side_camera_disconnect_result(self, success, message):
+        self.ui.pushButton_connect_side_camera.setEnabled(True)
+        if success:
+            self.if_side_camera_connected = False
+            self.ui.pushButton_connect_side_camera.setText("Connect")
+            self.ui.comboBox_camera_device_side.setEnabled(True)
+            self.ui.label_camera_preview_1.clear()
+            self._set_arm_status(self.ui.label_camera_status_1, "disconnected", message)
+        else:
+            self._set_arm_status(self.ui.label_camera_status_1, "disconnect_failed", message)
+        self.ui.statusbar.showMessage(f"Side camera: {message}")
+
+    @Slot(bool, str)
+    def handle_front_camera_disconnect_result(self, success, message):
+        self.ui.pushButton_connect__front_camera.setEnabled(True)
+        if success:
+            self.if_front_camera_connected = False
+            self.ui.pushButton_connect__front_camera.setText("Connect")
+            self.ui.comboBox_camera_device_front.setEnabled(True)
+            self.ui.label_camera_preview_2.clear()
+            self._set_arm_status(self.ui.label_camera_status_2, "disconnected", message)
+        else:
+            self._set_arm_status(self.ui.label_camera_status_2, "disconnect_failed", message)
+        self.ui.statusbar.showMessage(f"Front camera: {message}")
+
+    @Slot(bool, str)
+    def handle_hand_camera_disconnect_result(self, success, message):
+        self.ui.pushButton_connect_camera_hand.setEnabled(True)
+        if success:
+            self.if_hand_camera_connected = False
+            self.ui.pushButton_connect_camera_hand.setText("Connect")
+            self.ui.comboBox_camera_device_hand.setEnabled(True)
+            self.ui.label_camera_preview_3.clear()
+            self._set_arm_status(self.ui.label_camera_status_3, "disconnected", message)
+        else:
+            self._set_arm_status(self.ui.label_camera_status_3, "disconnect_failed", message)
+        self.ui.statusbar.showMessage(f"Hand camera: {message}")
+
+    @Slot(object)
+    def handle_side_camera_frame(self, frame):
+        if self.if_side_camera_connected:
+            self.show_camera_frame(self.ui.label_camera_preview_1, frame)
+
+    @Slot(object)
+    def handle_front_camera_frame(self, frame):
+        if self.if_front_camera_connected:
+            self.show_camera_frame(self.ui.label_camera_preview_2, frame)
+
+    @Slot(object)
+    def handle_hand_camera_frame(self, frame):
+        if self.if_hand_camera_connected:
+            self.show_camera_frame(self.ui.label_camera_preview_3, frame)
+
+    @staticmethod
+    def show_camera_frame(label, frame):
+        height, width, _ = frame.shape
+        image = QImage(frame.data, width, height, frame.strides[0], QImage.Format.Format_BGR888)
+        pixmap = QPixmap.fromImage(image).scaled(
+            label.size(), Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        label.setPixmap(pixmap)
 
     def on_camera_refresh_clicked(self):
         model = self.ui.comboBox_camera_model.currentText().strip()
@@ -200,6 +449,11 @@ class MainWindow(QMainWindow):
 
         #init hand thread
         self.init_hand_thread()
+
+        # One worker and event loop for each camera view.
+        self.init_camera_threads()
+
+
 
 
 #region===================hand thread=========================
@@ -570,6 +824,21 @@ class MainWindow(QMainWindow):
 
     # region ================= 安全退出 =================
     def closeEvent(self, event):
+        Logger.instance().info("Closing side camera thread...")
+        QMetaObject.invokeMethod(self.side_camera_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
+        self.side_camera_thread.quit()
+        self.side_camera_thread.wait()
+
+        Logger.instance().info("Closing front camera thread...")
+        QMetaObject.invokeMethod(self.front_camera_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
+        self.front_camera_thread.quit()
+        self.front_camera_thread.wait()
+
+        Logger.instance().info("Closing hand camera thread...")
+        QMetaObject.invokeMethod(self.hand_camera_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
+        self.hand_camera_thread.quit()
+        self.hand_camera_thread.wait()
+
         # Stop the hand worker before its QThread is destroyed.
         Logger.instance().info("Closing hand thread...")
         self.hand_thread.quit()

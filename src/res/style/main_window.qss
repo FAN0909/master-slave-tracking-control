@@ -108,9 +108,6 @@ QLabel[armState="failed"], QLabel[armState="disconnect_failed"] {
     color: #ac3340;
     background: #fde9eb;
 }
-QLabel[uiRole="cameraStatus"] {
-    color: #68778a;
-}
 QLabel[uiRole="cameraPreview"] {
     background: #e8edf2;
     border: 1px solid #c9d6e3;
