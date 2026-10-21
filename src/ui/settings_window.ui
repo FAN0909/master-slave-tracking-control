@@ -6,18 +6,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>820</width>
+    <width>1025</width>
     <height>535</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>480</width>
-    <height>320</height>
+    <width>800</width>
+    <height>400</height>
    </size>
   </property>
   <property name="windowTitle">
-   <string>设置</string>
+   <string>Setting</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -26,83 +26,8 @@
       <number>0</number>
      </property>
      <widget class="QWidget" name="tab_robotset">
-      <attribute name="title">
-       <string>Robot Set</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
-         <item>
-          <widget class="QGroupBox" name="groupBox">
-           <property name="title">
-            <string>MasterRobot</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox_2">
-           <property name="title">
-            <string>SlaveRobot</string>
-           </property>
-           <widget class="QWidget" name="formLayoutWidget">
-            <property name="geometry">
-             <rect>
-              <x>10</x>
-              <y>30</y>
-              <width>181</width>
-              <height>89</height>
-             </rect>
-            </property>
-            <layout class="QFormLayout" name="formLayout">
-             <item row="0" column="0">
-              <widget class="QLabel" name="label">
-               <property name="text">
-                <string>Vel(°/s)</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_2">
-               <property name="text">
-                <string>Acc°/s^2</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_3">
-               <property name="text">
-                <string>Jerk°/s^3</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QLineEdit" name="lineEdit_slave_arm_vel">
-               <property name="text">
-                <string>80</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QLineEdit" name="lineEdit_slave_arm_acc">
-               <property name="text">
-                <string>1000</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QLineEdit" name="lineEdit_slave_arm_jerk">
-               <property name="text">
-                <string>1000</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
+      <attribute name="title"><string>Robot Set</string></attribute>
+      <layout class="QHBoxLayout" name="horizontalLayout_robotset" stretch="1,1"><item><widget class="QGroupBox" name="groupBox"><property name="title"><string>MasterRobot</string></property><layout class="QVBoxLayout" name="verticalLayout_groupBox"><item><layout class="QGridLayout" name="gridLayout_master_telemetry" columnstretch="0,1,0,1"><item row="0" column="0"><widget class="QLabel" name="label_master_joint_header"><property name="text"><string>关节角度 (°)</string></property></widget></item><item row="0" column="2"><widget class="QLabel" name="label_master_tcp_header"><property name="text"><string>TCP 位姿</string></property></widget></item><item row="1" column="0"><widget class="QLabel" name="label_master_joint0"><property name="text"><string>joint0</string></property></widget></item><item row="1" column="1"><widget class="QLineEdit" name="lineEdit_master_joint0"><property name="readOnly"><bool>true</bool></property></widget></item><item row="2" column="0"><widget class="QLabel" name="label_master_joint1"><property name="text"><string>joint1</string></property></widget></item><item row="2" column="1"><widget class="QLineEdit" name="lineEdit_master_joint1"><property name="readOnly"><bool>true</bool></property></widget></item><item row="3" column="0"><widget class="QLabel" name="label_master_joint2"><property name="text"><string>joint2</string></property></widget></item><item row="3" column="1"><widget class="QLineEdit" name="lineEdit_master_joint2"><property name="readOnly"><bool>true</bool></property></widget></item><item row="4" column="0"><widget class="QLabel" name="label_master_joint3"><property name="text"><string>joint3</string></property></widget></item><item row="4" column="1"><widget class="QLineEdit" name="lineEdit_master_joint3"><property name="readOnly"><bool>true</bool></property></widget></item><item row="5" column="0"><widget class="QLabel" name="label_master_joint4"><property name="text"><string>joint4</string></property></widget></item><item row="5" column="1"><widget class="QLineEdit" name="lineEdit_master_joint4"><property name="readOnly"><bool>true</bool></property></widget></item><item row="6" column="0"><widget class="QLabel" name="label_master_joint5"><property name="text"><string>joint5</string></property></widget></item><item row="6" column="1"><widget class="QLineEdit" name="lineEdit_master_joint5"><property name="readOnly"><bool>true</bool></property></widget></item><item row="7" column="0"><widget class="QLabel" name="label_master_joint6"><property name="text"><string>joint6</string></property></widget></item><item row="7" column="1"><widget class="QLineEdit" name="lineEdit_master_joint6"><property name="readOnly"><bool>true</bool></property></widget></item><item row="1" column="2"><widget class="QLabel" name="label_master_x"><property name="text"><string>x (mm)</string></property></widget></item><item row="1" column="3"><widget class="QLineEdit" name="lineEdit_master_x"><property name="readOnly"><bool>true</bool></property><property name="text"><string>—</string></property></widget></item><item row="2" column="2"><widget class="QLabel" name="label_master_y"><property name="text"><string>y (mm)</string></property></widget></item><item row="2" column="3"><widget class="QLineEdit" name="lineEdit_master_y"><property name="readOnly"><bool>true</bool></property><property name="text"><string>—</string></property></widget></item><item row="3" column="2"><widget class="QLabel" name="label_master_z"><property name="text"><string>z (mm)</string></property></widget></item><item row="3" column="3"><widget class="QLineEdit" name="lineEdit_master_z"><property name="readOnly"><bool>true</bool></property><property name="text"><string>—</string></property></widget></item><item row="4" column="2"><widget class="QLabel" name="label_master_a"><property name="text"><string>a (rad)</string></property></widget></item><item row="4" column="3"><widget class="QLineEdit" name="lineEdit_master_a"><property name="readOnly"><bool>true</bool></property><property name="text"><string>—</string></property></widget></item><item row="5" column="2"><widget class="QLabel" name="label_master_b"><property name="text"><string>b (rad)</string></property></widget></item><item row="5" column="3"><widget class="QLineEdit" name="lineEdit_master_b"><property name="readOnly"><bool>true</bool></property><property name="text"><string>—</string></property></widget></item><item row="6" column="2"><widget class="QLabel" name="label_master_c"><property name="text"><string>c (rad)</string></property></widget></item><item row="6" column="3"><widget class="QLineEdit" name="lineEdit_master_c"><property name="readOnly"><bool>true</bool></property><property name="text"><string>—</string></property></widget></item></layout></item><item><spacer name="spacer_groupBox"><property name="orientation"><enum>Qt::Orientation::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>0</width><height>0</height></size></property></spacer></item></layout></widget></item><item><widget class="QGroupBox" name="groupBox_2"><property name="title"><string>SlaveRobot</string></property><layout class="QVBoxLayout" name="verticalLayout_groupBox_2"><item><layout class="QGridLayout" name="gridLayout_slave_params"><item row="0" column="0"><widget class="QLabel" name="label_slave_arm_vel"><property name="text"><string>Vel (°/s)</string></property></widget></item><item row="0" column="1"><widget class="QLineEdit" name="lineEdit_slave_arm_vel"><property name="text"><string>80</string></property></widget></item><item row="1" column="0"><widget class="QLabel" name="label_slave_arm_acc"><property name="text"><string>Acc (°/s²)</string></property></widget></item><item row="1" column="1"><widget class="QLineEdit" name="lineEdit_slave_arm_acc"><property name="text"><string>1000</string></property></widget></item><item row="2" column="0"><widget class="QLabel" name="label_slave_arm_jerk"><property name="text"><string>Jerk (°/s³)</string></property></widget></item><item row="2" column="1"><widget class="QLineEdit" name="lineEdit_slave_arm_jerk"><property name="text"><string>1000</string></property></widget></item><item row="3" column="0" colspan="2"><widget class="QPushButton" name="pushButton_save_slave_param"><property name="text"><string>Save</string></property></widget></item></layout></item><item><layout class="QGridLayout" name="gridLayout_slave_telemetry" columnstretch="0,1,0,1"><item row="0" column="0"><widget class="QLabel" name="label_slave_joint_header"><property name="text"><string>关节角度 (°)</string></property></widget></item><item row="0" column="2"><widget class="QLabel" name="label_slave_tcp_header"><property name="text"><string>TCP 位姿</string></property></widget></item><item row="1" column="0"><widget class="QLabel" name="label_slave_joint0"><property name="text"><string>joint0</string></property></widget></item><item row="1" column="1"><widget class="QLineEdit" name="lineEdit_slave_joint0"><property name="readOnly"><bool>true</bool></property></widget></item><item row="2" column="0"><widget class="QLabel" name="label_slave_joint1"><property name="text"><string>joint1</string></property></widget></item><item row="2" column="1"><widget class="QLineEdit" name="lineEdit_slave_joint1"><property name="readOnly"><bool>true</bool></property></widget></item><item row="3" column="0"><widget class="QLabel" name="label_slave_joint2"><property name="text"><string>joint2</string></property></widget></item><item row="3" column="1"><widget class="QLineEdit" name="lineEdit_slave_joint2"><property name="readOnly"><bool>true</bool></property></widget></item><item row="4" column="0"><widget class="QLabel" name="label_slave_joint3"><property name="text"><string>joint3</string></property></widget></item><item row="4" column="1"><widget class="QLineEdit" name="lineEdit_slave_joint3"><property name="readOnly"><bool>true</bool></property></widget></item><item row="5" column="0"><widget class="QLabel" name="label_slave_joint4"><property name="text"><string>joint4</string></property></widget></item><item row="5" column="1"><widget class="QLineEdit" name="lineEdit_slave_joint4"><property name="readOnly"><bool>true</bool></property></widget></item><item row="6" column="0"><widget class="QLabel" name="label_slave_joint5"><property name="text"><string>joint5</string></property></widget></item><item row="6" column="1"><widget class="QLineEdit" name="lineEdit_slave_joint5"><property name="readOnly"><bool>true</bool></property></widget></item><item row="7" column="0"><widget class="QLabel" name="label_slave_joint6"><property name="text"><string>joint6</string></property></widget></item><item row="7" column="1"><widget class="QLineEdit" name="lineEdit_slave_joint6"><property name="readOnly"><bool>true</bool></property></widget></item><item row="1" column="2"><widget class="QLabel" name="label_slave_x"><property name="text"><string>x (mm)</string></property></widget></item><item row="1" column="3"><widget class="QLineEdit" name="lineEdit_slave_x"><property name="readOnly"><bool>true</bool></property></widget></item><item row="2" column="2"><widget class="QLabel" name="label_slave_y"><property name="text"><string>y (mm)</string></property></widget></item><item row="2" column="3"><widget class="QLineEdit" name="lineEdit_slave_y"><property name="readOnly"><bool>true</bool></property></widget></item><item row="3" column="2"><widget class="QLabel" name="label_slave_z"><property name="text"><string>z (mm)</string></property></widget></item><item row="3" column="3"><widget class="QLineEdit" name="lineEdit_slave_z"><property name="readOnly"><bool>true</bool></property></widget></item><item row="4" column="2"><widget class="QLabel" name="label_slave_a"><property name="text"><string>a (rad)</string></property></widget></item><item row="4" column="3"><widget class="QLineEdit" name="lineEdit_slave_a"><property name="readOnly"><bool>true</bool></property></widget></item><item row="5" column="2"><widget class="QLabel" name="label_slave_b"><property name="text"><string>b (rad)</string></property></widget></item><item row="5" column="3"><widget class="QLineEdit" name="lineEdit_slave_b"><property name="readOnly"><bool>true</bool></property></widget></item><item row="6" column="2"><widget class="QLabel" name="label_slave_c"><property name="text"><string>c (rad)</string></property></widget></item><item row="6" column="3"><widget class="QLineEdit" name="lineEdit_slave_c"><property name="readOnly"><bool>true</bool></property></widget></item></layout></item><item><spacer name="spacer_groupBox_2"><property name="orientation"><enum>Qt::Orientation::Vertical</enum></property><property name="sizeHint" stdset="0"><size><width>0</width><height>0</height></size></property></spacer></item></layout></widget></item></layout>
      </widget>
      <widget class="QWidget" name="tab_cameraset">
       <attribute name="title">
@@ -137,24 +62,152 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_hand">
        <item>
-        <widget class="QLabel" name="label_hand">
-         <property name="text">
-          <string>灵巧手设置</string>
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="title">
+          <string>Actions</string>
          </property>
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_hand_model">
+              <item>
+               <widget class="QLabel" name="label_hand_model_settings">
+                <property name="text">
+                 <string>型号</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBox_hand_model_settings"/>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QTableWidget" name="tableWidget_hand_actions">
+              <column>
+               <property name="text">
+                <string>动作名称</string>
+               </property>
+              </column>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_2">
+              <item>
+               <widget class="QLabel" name="label_6">
+                <property name="text">
+                 <string>Set Current Actions</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Close</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBox_hand_current_close"/>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_5">
+                <property name="text">
+                 <string>Open</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBox_hand_current_open"/>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Action test</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBox_hand_actions_test"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_hand_test">
+                <property name="text">
+                 <string>test</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_hand_actions">
+              <item>
+               <widget class="QPushButton" name="pushButton_add_hand_actions">
+                <property name="text">
+                 <string>Add</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_delete_hand_actions">
+                <property name="text">
+                 <string>Delete</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_hand_actions">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_save_hand_actions">
+                <property name="text">
+                 <string>Save Actions</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+         </layout>
         </widget>
-       </item>
-       <item>
-        <spacer name="spacer_hand">
-         <property name="orientation">
-          <enum>Qt::Orientation::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>200</height>
-          </size>
-         </property>
-        </spacer>
        </item>
       </layout>
      </widget>

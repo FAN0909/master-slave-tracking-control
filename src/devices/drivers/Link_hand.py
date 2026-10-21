@@ -96,3 +96,13 @@ class LinkHand(BaseHand):
         except Exception as e:
             Logger.instance().error(f"[{self.name}] set speed failed: {e}")
             return False
+
+    def Set_force(self, force: list) -> bool:
+        try:
+            if self.hand_api is None or len(force) != self.MAX_JOINTS():
+                return False
+            self.hand_api.set_torque(force)
+            return True
+        except Exception as error:
+            Logger.instance().error(f"[{self.name}] set force failed: {error}")
+            return False

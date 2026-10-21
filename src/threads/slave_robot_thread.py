@@ -1,9 +1,10 @@
+import math
+
 from src.ui.log_stream import Logger
 
 from PySide6.QtCore import QObject, Signal, Slot, QTimer, Qt
-from src.devices.base.base_robotArm import BaseRobotArm
-from src.devices.robot_factory import create_slave_arm
-from src.shared_data.robot_share_data import RobotSharedMemory,SlaveState
+from src.devices.drivers_factory import create_slave_arm
+from src.shared_data.robot_share_data import RobotSharedMemory
 from src.controller.teleop_controller import MasterSlaveTeleopCalculator
 class SlaveRobotThread(QObject):
 
@@ -13,12 +14,12 @@ class SlaveRobotThread(QObject):
         sig_disable_result = Signal(bool, str)
         sig_joint_positions = Signal(list)
         sig_tcp_positions = Signal(list)
-        sig_robot_type_result = Signal(bool, str, str)
+        sig_follow_result = Signal(bool)
+        sig_hand_closed_changed = Signal(bool)
 
-        def __init__(self, arm: BaseRobotArm, shared_data: RobotSharedMemory, robot_type="NRC"):
+        def __init__(self, shared_data: RobotSharedMemory):
             super().__init__()
-            self.arm = arm
-            self.robot_type = robot_type
+            self.arm = None
             self.shared_data = shared_data
             self.if_connected = False
             self.if_power_on = False
@@ -28,6 +29,10 @@ class SlaveRobotThread(QObject):
             self.servo_target_positions = None
 
             self.if_running_follow = False
+            self.hand_trigger_start_deg = None
+            self.hand_trigger_closed = False
+            self.hand_close_threshold_deg = 30.0
+            self.hand_open_threshold_deg = 25.0
             self._resume_read_timer_interval = None
 
             self.timer_read_pos = QTimer(self)
@@ -39,34 +44,35 @@ class SlaveRobotThread(QObject):
 
             self.teleop_controller = MasterSlaveTeleopCalculator(shared_data)
 
-        @Slot(str)
-        def ChangeRobotType(self, robot_type):
+        def reset_shared_positions(self):
+            self.shared_data.slave.update_partial(
+                joints=[0.0] * self.arm.MAX_JOINT_COUNT,
+                tcp=[0.0] * self.arm.TCP_DIM,
+            )
+            self.shared_data.slave_increment.update_partial(
+                delta_joints=[0.0] * self.arm.MAX_JOINT_COUNT,
+            )
+
+        @Slot(str, str)
+        def ConnectRobot(self, robot_type, ip_address):
             if self.if_connected or self.if_running_follow:
-                message = "请先停止跟随并断开从手，再切换型号"
-                Logger.instance().error(message)
-                self.sig_robot_type_result.emit(False, self.robot_type, message)
-                return
+                self.sig_connect_result.emit(False, "请先停止跟随并断开从手，再连接设备")
+                return False
+
             try:
-                new_arm = create_slave_arm(robot_type)
+                self.arm = create_slave_arm(robot_type)
             except Exception as error:
                 message = str(error)
                 Logger.instance().error(message)
-                self.sig_robot_type_result.emit(False, self.robot_type, message)
-                return
+                self.sig_connect_result.emit(False, message)
+                return False
 
-            self.StopTimer()
-            self.timer_follow.stop()
-            self.arm = new_arm
-            self.robot_type = robot_type
             self.if_power_on = False
             self.if_servoj_open = False
             self.servo_target_positions = None
             self._resume_read_timer_interval = None
-            self.teleop_controller = MasterSlaveTeleopCalculator(self.shared_data)
-            self.shared_data.slave.write(SlaveState(joints=[0.0] * 7, tcp=[0.0] * 6))
-            message = f"从手已切换为 {robot_type}，请重新连接"
-            Logger.instance().info(message)
-            self.sig_robot_type_result.emit(True, robot_type, message)
+            self.reset_shared_positions()
+            return self.Connect(ip_address)
 
 
         @Slot(int)
@@ -84,8 +90,7 @@ class SlaveRobotThread(QObject):
             joint_pos = self.arm.Get_joint_positions()
             tcp_pos = self.arm.Get_tcp_positions()   
 
-            slave_state = SlaveState(joints=joint_pos, tcp=tcp_pos)
-            self.shared_data.slave.write(slave_state)
+            self.shared_data.slave.update_partial(joints=joint_pos, tcp=tcp_pos)
 
             self.sig_joint_positions.emit(joint_pos)
             self.sig_tcp_positions.emit(tcp_pos)
@@ -94,6 +99,8 @@ class SlaveRobotThread(QObject):
         def Connect(self, ip_address: str) -> bool:
             self.arm.ip_address = ip_address
             if self.arm.Connect():
+                self.reset_shared_positions()
+                self.shared_data.slave.update_partial(name=self.arm.name)
                 self.if_connected = True
                 self.sig_connect_result.emit(True, "connected successfully")
                 return True
@@ -188,6 +195,7 @@ class SlaveRobotThread(QObject):
                 self.OpenServoJ()
             if not self.if_servoj_open:
                 Logger.instance().error("ServoJ未打开，无法启动跟随")
+                self.sig_follow_result.emit(False)
                 return
             # 初始化伺服目标为当前从手位置
             self.servo_target_positions = self.arm.Get_joint_positions()
@@ -195,28 +203,69 @@ class SlaveRobotThread(QObject):
             ok = self.teleop_controller.reset()
             if not ok:
                 Logger.instance().error("遥操作重置失败，主手数据无效，无法开启跟随")
+                self.sig_follow_result.emit(False)
                 return
+            if (len(self.teleop_controller.master_start_positions) < 7
+                    or not math.isfinite(self.teleop_controller.master_start_positions[6])):
+                Logger.instance().error("主手第七关节角度缺失或无效，无法启用 hand 扳机")
+                self.sig_follow_result.emit(False)
+                return
+            self.hand_trigger_start_deg = self.teleop_controller.master_start_positions[6]
+            self.hand_trigger_closed = False
+            Logger.instance().info(
+                f"hand 扳机已校准：松开角度 {self.hand_trigger_start_deg:.2f}°，"
+                f"扣下阈值 {self.hand_close_threshold_deg:g}°，"
+                f"松开阈值 {self.hand_open_threshold_deg:g}°"
+            )
             if time_interval_ms <= 0:
                 time_interval_ms = 20
             self.if_running_follow = True
             self.timer_follow.start(time_interval_ms)
+            self.sig_follow_result.emit(True)
+
             Logger.instance().info("主从跟随开启")
 
         @Slot()
         def StopFollow(self):
             """停止跟随"""
             self.if_running_follow = False
+            self.hand_trigger_start_deg = None
+            self.hand_trigger_closed = False
             self.timer_follow.stop()
+            self.sig_follow_result.emit(False)
 
             Logger.instance().info("🛑 主从跟随关闭")
+
+        @Slot()
+        def SyncHandTriggerState(self):
+            """灵巧手在跟随期间连接时，补发当前扳机状态。"""
+            if self.if_running_follow and self.hand_trigger_start_deg is not None:
+                self.sig_hand_closed_changed.emit(self.hand_trigger_closed)
 
         @Slot()
         def RunFollow(self):
             if not self.if_running_follow:
                 return
 
-            # 调用teleop控制器，内部自动读共享内存主手，返回增量
-            delta = self.teleop_controller.compute_increment()
+            # 同一份主手快照同时用于从手跟随和第七轴扳机判断。
+            master_joints = self.shared_data.master.read().joints
+            delta = self.teleop_controller.compute_increment(master_joints)
+            # 启动跟随时记录的第七轴角度是扳机“松开”位置；读数无效时跳过本次判断。
+            if (self.hand_trigger_start_deg is not None and len(master_joints) >= 7
+                    and math.isfinite(master_joints[6])):
+                # 取绝对值：无论扣动时角度增大还是减小，都按离开松开位置的幅度判断。
+                travel_deg = abs(master_joints[6] - self.hand_trigger_start_deg)
+                # 原本松开，且扣动幅度达到闭合阈值时，只发一次 True 给 hand 线程。
+                if not self.hand_trigger_closed and travel_deg >= self.hand_close_threshold_deg:
+                    self.hand_trigger_closed = True
+                    self.sig_hand_closed_changed.emit(True)
+                    Logger.instance().info(f"hand 扳机扣下：第七轴变化 {travel_deg:.2f}°")
+                # 原本闭合，且扳机回到释放阈值以内时，只发一次 False。
+                # 闭合阈值大于释放阈值，中间区域保持原状态，避免临界位置反复开合。
+                elif self.hand_trigger_closed and travel_deg <= self.hand_open_threshold_deg:
+                    self.hand_trigger_closed = False
+                    self.sig_hand_closed_changed.emit(False)
+                    Logger.instance().info(f"hand 扳机松开：第七轴变化 {travel_deg:.2f}°")
             if self.servo_target_positions is None:
                 self.servo_target_positions = self.arm.Get_joint_positions()
             # 叠加增量

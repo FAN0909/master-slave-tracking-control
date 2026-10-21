@@ -6,656 +6,749 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1054</width>
-    <height>791</height>
+    <width>1349</width>
+    <height>882</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLabel" name="label">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>435</y>
-      <width>1011</width>
-      <height>25</height>
-     </rect>
+   <layout class="QVBoxLayout" name="verticalLayout_main" stretch="0,0,2,1">
+    <property name="spacing">
+     <number>8</number>
     </property>
-    <property name="text">
-     <string>就绪</string>
+    <property name="leftMargin">
+     <number>10</number>
     </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton_start_follow">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>400</y>
-      <width>95</width>
-      <height>25</height>
-     </rect>
+    <property name="topMargin">
+     <number>8</number>
     </property>
-    <property name="text">
-     <string>Start follow</string>
+    <property name="rightMargin">
+     <number>10</number>
     </property>
-   </widget>
-   <widget class="QWidget" name="layoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>10</y>
-      <width>1051</width>
-      <height>361</height>
-     </rect>
+    <property name="bottomMargin">
+     <number>8</number>
     </property>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
-     <item>
-      <widget class="QGroupBox" name="groupBox_2">
-       <property name="title">
-        <string>Master Arm</string>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
+      <item>
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="title">
+         <string>Master Arm</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_master_arm" stretch="0,1,0,0,0,0,0">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_31">
+           <property name="text">
+            <string>port</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="comboBox_master_port"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_refresh_master_port">
+           <property name="text">
+            <string>Refresh Port</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_38">
+           <property name="text">
+            <string>Hz(ms)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_master_read_pos_rate">
+           <property name="maximumSize">
+            <size>
+             <width>65</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>20</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_connect_master_arm">
+           <property name="text">
+            <string>Connect</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_master_status">
+           <property name="minimumSize">
+            <size>
+             <width>78</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>● Disconnected</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox">
+        <property name="title">
+         <string>Slave Arm</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_slave_arm" stretch="0,0,0,1,0,0,0,0,0">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_32">
+           <property name="text">
+            <string>Model</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="comboBox_robot_type">
+           <item>
+            <property name="text">
+             <string>NRC</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Dobot_Cr3</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_16">
+           <property name="text">
+            <string>IP</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_slave_arm_ip">
+           <property name="text">
+            <string>192.168.2.14</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_30">
+           <property name="text">
+            <string>Hz(ms)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_slave_read_pos_rate">
+           <property name="maximumSize">
+            <size>
+             <width>65</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>20</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="Btn_robot_connect">
+           <property name="text">
+            <string>Connect</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_robot_PowerOn">
+           <property name="text">
+            <string>PowerOn</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_slave_status">
+           <property name="minimumSize">
+            <size>
+             <width>78</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>● Disconnected</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_control_panels" stretch="1,1">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <item>
+       <widget class="QGroupBox" name="groupBox_hand_control">
+        <property name="title">
+         <string>Dexterous Hand Control</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_hand_control">
+         <property name="spacing">
+          <number>7</number>
+         </property>
+         <item>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <item row="1" column="4">
+            <widget class="QPushButton" name="pushButton_connect_hand">
+             <property name="text">
+              <string>Connect</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_34">
+             <property name="text">
+              <string>Type</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <widget class="QComboBox" name="comboBox_hand_comm_type">
+             <item>
+              <property name="text">
+               <string>Modebus</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Can</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="label_35">
+             <property name="text">
+              <string>Comm Type</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="3">
+            <widget class="QComboBox" name="comboBox_hand_comm_info"/>
+           </item>
+           <item row="1" column="2">
+            <widget class="QLabel" name="label_36">
+             <property name="text">
+              <string>Comm Info</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QComboBox" name="comboBox_hand_type">
+             <item>
+              <property name="text">
+               <string>Right Hand</string>
+              </property>
+             </item>
+             <item>
+              <property name="text">
+               <string>Left Hand</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+           <item row="0" column="4">
+            <widget class="QPushButton" name="pushButton_refresh_hand_connect_info">
+             <property name="text">
+              <string>Refresh</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="label_33">
+             <property name="text">
+              <string>Model</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="comboBox_hand_model">
+             <item>
+              <property name="text">
+               <string>LinkerO6</string>
+              </property>
+             </item>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_37">
+           <property name="text">
+            <string>这里注意 如果是ubuntu下用can  需要在配置文件中写入root密码</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_follow_control">
+        <property name="title">
+         <string>Follow Control</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_follow_control">
+         <property name="spacing">
+          <number>8</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_follow_start">
+           <item>
+            <widget class="QPushButton" name="pushButton_start_follow">
+             <property name="text">
+              <string>Start Follow</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_follow_interval">
+             <property name="text">
+              <string>Interval (ms)</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEdit_follow_rate">
+             <property name="text">
+              <string>20</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_follow_hint">
+           <property name="text">
+            <string>连接主手、从手和灵巧手后可启动跟随</string>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_follow_spacer">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBox_camera_monitor">
+      <property name="title">
+       <string>Camera Monitoring (3 Live Feeds)</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_camera_monitor" stretch="0,1">
+       <property name="spacing">
+        <number>6</number>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_4">
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
-           <layout class="QGridLayout" name="gridLayout_4">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_31">
-              <property name="text">
-               <string>port</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QComboBox" name="comboBox_master_port"/>
-            </item>
-            <item row="0" column="3">
-             <widget class="QPushButton" name="pushButton_connect_master_arm">
-              <property name="text">
-               <string>Connect</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="2">
-             <widget class="QPushButton" name="pushButton_refresh_master_port">
-              <property name="text">
-               <string>Refresh Port</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QGridLayout" name="gridLayout" columnstretch="1,0,0,0">
-            <item row="2" column="3">
-             <widget class="QLineEdit" name="lineEdit_master_y"/>
-            </item>
-            <item row="3" column="1">
-             <widget class="QLineEdit" name="lineEdit_master_joint2"/>
-            </item>
-            <item row="6" column="0">
-             <widget class="QLabel" name="label_7">
-              <property name="text">
-               <string>joint5(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QLineEdit" name="lineEdit_master_joint1"/>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_6">
-              <property name="text">
-               <string>joint4(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_2">
-              <property name="text">
-               <string>joint0(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="3">
-             <widget class="QLineEdit" name="lineEdit_master_a"/>
-            </item>
-            <item row="3" column="2">
-             <widget class="QLabel" name="label_12">
-              <property name="text">
-               <string>z(mm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="3">
-             <widget class="QLineEdit" name="lineEdit_master_b"/>
-            </item>
-            <item row="6" column="2">
-             <widget class="QLabel" name="label_15">
-              <property name="text">
-               <string>c(rad)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="2">
-             <widget class="QLabel" name="label_11">
-              <property name="text">
-               <string>y(mm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="3">
-             <widget class="QLineEdit" name="lineEdit_master_z"/>
-            </item>
-            <item row="1" column="2">
-             <widget class="QLabel" name="label_10">
-              <property name="text">
-               <string>x(mm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="lineEdit_master_read_pos_rate">
-              <property name="text">
-               <string>20</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="2">
-             <widget class="QLabel" name="label_14">
-              <property name="text">
-               <string>b(rad)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_5">
-              <property name="text">
-               <string>joint3(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="lineEdit_master_joint0"/>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_4">
-              <property name="text">
-               <string>joint2(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QLineEdit" name="lineEdit_master_joint5"/>
-            </item>
-            <item row="6" column="3">
-             <widget class="QLineEdit" name="lineEdit_master_c"/>
-            </item>
-            <item row="5" column="1">
-             <widget class="QLineEdit" name="lineEdit_master_joint4"/>
-            </item>
-            <item row="4" column="2">
-             <widget class="QLabel" name="label_13">
-              <property name="text">
-               <string>a(rad)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_8">
-              <property name="text">
-               <string>Hz(ms)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="3">
-             <widget class="QLineEdit" name="lineEdit_master_x"/>
-            </item>
-            <item row="4" column="1">
-             <widget class="QLineEdit" name="lineEdit_master_joint3"/>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_3">
-              <property name="text">
-               <string>joint1(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label_9">
-              <property name="text">
-               <string>joint6(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QLineEdit" name="lineEdit_master_joint6"/>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
-     </item>
-     <item>
-      <widget class="QGroupBox" name="groupBox">
-       <property name="title">
-        <string>Slave Arm</string>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <layout class="QGridLayout" name="gridLayout_2">
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_16">
-              <property name="text">
-               <string>IP</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_arm_ip">
-              <property name="text">
-               <string>192.168.2.14</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="3">
-             <widget class="QPushButton" name="pushButton_robot_PowerOn">
-              <property name="text">
-               <string>PowerOn</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QPushButton" name="Btn_robot_connect">
-              <property name="text">
-               <string>Connect</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QComboBox" name="comboBox_robot_type">
-              <item>
-               <property name="text">
-                <string>NRC</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Dobot_Cr3</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_32">
-              <property name="text">
-               <string>Model</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <layout class="QGridLayout" name="gridLayout_3" columnstretch="1,0,0,0">
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_read_pos_rate">
-              <property name="text">
-               <string>20</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="3">
-             <widget class="QLineEdit" name="lineEdit_slave_y"/>
-            </item>
-            <item row="6" column="2">
-             <widget class="QLabel" name="label_24">
-              <property name="text">
-               <string>c(rad)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QLabel" name="label_25">
-              <property name="text">
-               <string>x(mm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_27">
-              <property name="text">
-               <string>joint1(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="2">
-             <widget class="QLabel" name="label_26">
-              <property name="text">
-               <string>y(mm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_30">
-              <property name="text">
-               <string>Hz(ms)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_joint0"/>
-            </item>
-            <item row="2" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_joint1"/>
-            </item>
-            <item row="1" column="3">
-             <widget class="QLineEdit" name="lineEdit_slave_x"/>
-            </item>
-            <item row="5" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_joint4"/>
-            </item>
-            <item row="4" column="2">
-             <widget class="QLabel" name="label_29">
-              <property name="text">
-               <string>a(rad)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="0">
-             <widget class="QLabel" name="label_17">
-              <property name="text">
-               <string>joint5(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="3">
-             <widget class="QLineEdit" name="lineEdit_slave_c"/>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_22">
-              <property name="text">
-               <string>joint4(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_23">
-              <property name="text">
-               <string>joint3(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="6" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_joint5"/>
-            </item>
-            <item row="4" column="3">
-             <widget class="QLineEdit" name="lineEdit_slave_a"/>
-            </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_20">
-              <property name="text">
-               <string>joint2(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="2">
-             <widget class="QLabel" name="label_18">
-              <property name="text">
-               <string>b(rad)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_21">
-              <property name="text">
-               <string>joint0(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_joint2"/>
-            </item>
-            <item row="4" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_joint3"/>
-            </item>
-            <item row="5" column="3">
-             <widget class="QLineEdit" name="lineEdit_slave_b"/>
-            </item>
-            <item row="3" column="3">
-             <widget class="QLineEdit" name="lineEdit_slave_z"/>
-            </item>
-            <item row="3" column="2">
-             <widget class="QLabel" name="label_28">
-              <property name="text">
-               <string>z(mm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="0">
-             <widget class="QLabel" name="label_19">
-              <property name="text">
-               <string>joint6(°)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="7" column="1">
-             <widget class="QLineEdit" name="lineEdit_slave_joint6"/>
-            </item>
-           </layout>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QGroupBox" name="groupBox_log">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>530</y>
-      <width>1051</width>
-      <height>231</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>运行日志</string>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout_log">
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_log_toolbar">
        <item>
-        <spacer name="spacer_log">
-         <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
+        <layout class="QHBoxLayout" name="horizontalLayout_camera_toolbar">
+         <item>
+          <widget class="QLabel" name="label_camera_monitor_hint">
+           <property name="text">
+            <string>Device Connections and Preview</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer_camera_toolbar">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Model</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="comboBox_camera_model">
+           <item>
+            <property name="text">
+             <string>RealSenseD435</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_camera_frame_interval">
+           <property name="text">
+            <string>Interval (ms)</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_camera_frame_interval">
+           <property name="maximumSize">
+            <size>
+             <width>65</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>20</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_camera_refresh">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="text">
+            <string>Refresh Devices List</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_camera_connect_all">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="text">
+            <string>Connect All</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_camera_disconnect_all">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="text">
+            <string>Disconnect All</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
-        <widget class="QCheckBox" name="checkBox_log_autoscroll">
-         <property name="text">
-          <string>自动滚动</string>
+        <layout class="QHBoxLayout" name="horizontalLayout_camera_cards">
+         <property name="spacing">
+          <number>8</number>
          </property>
-         <property name="checked">
+         <item>
+          <widget class="QGroupBox" name="groupBox_camera_1">
+           <property name="title">
+            <string>Camera 1 (Side View)</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_camera_1" stretch="0,1">
+            <property name="spacing">
+             <number>5</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_camera_controls_1">
+              <item>
+               <widget class="QLabel" name="label_camera_device_1">
+                <property name="text">
+                 <string>Device</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBox_camera_device_side">
+                <item>
+                 <property name="text">
+                  <string>Camera 0</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_connect_side_camera">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string>Connect</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_camera_status_1">
+                <property name="text">
+                 <string>● Disconnected</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_camera_preview_1">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>185</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_camera_2">
+           <property name="title">
+            <string>Camera 2 (Front View)</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_camera_2" stretch="0,1">
+            <property name="spacing">
+             <number>5</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_camera_controls_2">
+              <item>
+               <widget class="QLabel" name="label_camera_device_2">
+                <property name="text">
+                 <string>Device</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBox_camera_device_front">
+                <item>
+                 <property name="text">
+                  <string>Camera 1</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_connect__front_camera">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string>Connect</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_camera_status_2">
+                <property name="text">
+                 <string>● Disconnected</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_camera_preview_2">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>185</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_camera_3">
+           <property name="title">
+            <string>Camera 3 (Hand)</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_camera_3" stretch="0,1">
+            <property name="spacing">
+             <number>5</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_camera_controls_3">
+              <item>
+               <widget class="QLabel" name="label_camera_device_3">
+                <property name="text">
+                 <string>Device</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="comboBox_camera_device_hand">
+                <item>
+                 <property name="text">
+                  <string>Camera 2</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_connect_camera_hand">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="text">
+                 <string>Connect</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_camera_status_3">
+                <property name="text">
+                 <string>● Disconnected</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_camera_preview_3">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>185</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBox_log">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>100</height>
+       </size>
+      </property>
+      <property name="title">
+       <string>Activity Log</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_log_toolbar">
+         <item>
+          <spacer name="spacer_log">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="checkBox_log_autoscroll">
+           <property name="text">
+            <string>Auto Scroll</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="pushButton_clear_log">
+           <property name="text">
+            <string>Clear Log</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QPlainTextEdit" name="plainTextEdit_log">
+         <property name="font">
+          <font>
+           <family>Monospace</family>
+           <pointsize>10</pointsize>
+          </font>
+         </property>
+         <property name="lineWrapMode">
+          <enum>QPlainTextEdit::LineWrapMode::NoWrap</enum>
+         </property>
+         <property name="readOnly">
           <bool>true</bool>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButton_clear_log">
-         <property name="text">
-          <string>清空日志</string>
+         <property name="maximumBlockCount">
+          <number>2000</number>
+         </property>
+         <property name="placeholderText">
+          <string>Activity logs will appear here...</string>
          </property>
         </widget>
        </item>
       </layout>
-     </item>
-     <item>
-      <widget class="QPlainTextEdit" name="plainTextEdit_log">
-       <property name="font">
-        <font>
-         <family>Monospace</family>
-         <pointsize>10</pointsize>
-        </font>
-       </property>
-       <property name="styleSheet">
-        <string>QPlainTextEdit { background: #18212b; color: #e0e6ed; border: 1px solid #354353; border-radius: 4px; padding: 6px; }</string>
-       </property>
-       <property name="lineWrapMode">
-        <enum>QPlainTextEdit::LineWrapMode::NoWrap</enum>
-       </property>
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-       <property name="maximumBlockCount">
-        <number>2000</number>
-       </property>
-       <property name="placeholderText">
-        <string>运行日志将显示在这里…</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QLineEdit" name="lineEdit_follow_rate">
-    <property name="geometry">
-     <rect>
-      <x>140</x>
-      <y>400</y>
-      <width>113</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>20</string>
-    </property>
-   </widget>
-   <widget class="QWidget" name="gridLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>341</x>
-      <y>390</y>
-      <width>701</width>
-      <height>71</height>
-     </rect>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_5">
-     <item row="1" column="1">
-      <widget class="QComboBox" name="comboBox_hand_type">
-       <item>
-        <property name="text">
-         <string>Right Hand</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Left Hand</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="0" column="3">
-      <widget class="QComboBox" name="comboBox_hand_comm_type">
-       <item>
-        <property name="text">
-         <string>Modebus</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Can</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="1" column="4">
-      <widget class="QPushButton" name="pushButton_connect_hand">
-       <property name="text">
-        <string>Connect</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="4">
-      <widget class="QPushButton" name="pushButton_refresh_hand_connect_info">
-       <property name="text">
-        <string>Refresh</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="comboBox_hand_model">
-       <item>
-        <property name="text">
-         <string>LinkerO6</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_34">
-       <property name="text">
-        <string>Type</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_33">
-       <property name="text">
-        <string>Model</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3">
-      <widget class="QComboBox" name="comboBox_hand_comm_info"/>
-     </item>
-     <item row="0" column="2">
-      <widget class="QLabel" name="label_35">
-       <property name="text">
-        <string>Comm Type</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2">
-      <widget class="QLabel" name="label_36">
-       <property name="text">
-        <string>Comm Info</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QPushButton" name="pushButton_test_hand">
-    <property name="geometry">
-     <rect>
-      <x>600</x>
-      <y>470</y>
-      <width>95</width>
-      <height>25</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>PushButton</string>
-    </property>
-   </widget>
+     </widget>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1054</width>
+     <width>1349</width>
      <height>27</height>
     </rect>
    </property>

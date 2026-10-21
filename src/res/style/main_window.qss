@@ -1,0 +1,123 @@
+/* Common appearance for each widget type. */
+QGroupBox {
+    border: 1px solid #bfd5e9;
+    border-radius: 7px;
+    margin-top: 12px;
+    background: #f6faff;
+    font-weight: bold;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 4px;
+}
+
+QLineEdit, QComboBox {
+    border: 1px solid #b7c9dc;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #24384d;
+    padding: 3px 6px;
+    min-height: 22px;
+    selection-background-color: #cfe2ff;
+    selection-color: #183b63;
+}
+QLineEdit:focus, QComboBox:focus {
+    border: 1px solid #5898dd;
+    background: #fbfdff;
+}
+QComboBox {
+    padding-right: 20px;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 18px;
+    border-left: 1px solid #d0deec;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background: #edf4fc;
+}
+QComboBox::drop-down:hover {
+    background: #daeaff;
+}
+QComboBox::down-arrow {
+    image: url("__STYLE_DIR__/chevron-down.svg");
+    width: 11px;
+    height: 7px;
+}
+QComboBox QAbstractItemView {
+    border: 1px solid #a9c6e5;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #24384d;
+    outline: 0;
+    padding: 3px;
+    selection-background-color: #dbeaff;
+    selection-color: #164d86;
+}
+
+QPushButton {
+    border: 1px solid #9ebee2;
+    border-radius: 6px;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                stop:0 #f8fbff, stop:1 #e6f1ff);
+    color: #20517e;
+    padding: 4px 6px;
+    min-height: 20px;
+    font-weight: 500;
+}
+QPushButton:hover {
+    border-color: #5d9cdd;
+    background: #dcecff;
+}
+QPushButton:pressed {
+    border-color: #4580be;
+    background: #c6e0ff;
+    padding-top: 5px;
+    padding-bottom: 3px;
+}
+QPushButton:focus {
+    border-color: #4e90d5;
+}
+QPushButton:disabled {
+    color: #9ba9b7;
+    border-color: #d5dee8;
+    background: #edf1f5;
+}
+
+/* Labels with a special purpose use a role rather than an object name. */
+QLabel[uiRole="armStatus"] {
+    border-radius: 8px;
+    padding: 3px 7px;
+    font-weight: 600;
+}
+QLabel[armState="disconnected"] {
+    color: #63758a;
+    background: #e9eef3;
+}
+QLabel[armState="connecting"], QLabel[armState="disconnecting"] {
+    color: #986500;
+    background: #fff3d6;
+}
+QLabel[armState="connected"] {
+    color: #227343;
+    background: #dcf3e4;
+}
+QLabel[armState="failed"], QLabel[armState="disconnect_failed"] {
+    color: #ac3340;
+    background: #fde9eb;
+}
+QLabel[uiRole="cameraPreview"] {
+    background: #e8edf2;
+    border: 1px solid #c9d6e3;
+    border-radius: 5px;
+}
+
+QPlainTextEdit {
+    background: #18212b;
+    color: #e0e6ed;
+    border: 1px solid #354353;
+    border-radius: 4px;
+    padding: 6px;
+}
