@@ -1,4 +1,7 @@
 PySide6
+PyYAML
 numpy
+pymodbus==3.5.1
+python-can
 pyserial
 pyrealsense2
