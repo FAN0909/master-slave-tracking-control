@@ -60,13 +60,15 @@ class NrcArm(BaseRobotArm):
             self._load_config(self.config_path)
             Logger.instance().info(f"[{self.name}] connecting to {self.ip_address}:{self.command_port} and {self.servo_port}...")
             self.command_fd = nrc_interface.connect_robot(self.ip_address, str(self.command_port))
-            self.servo_fd = nrc_interface.connect_robot(self.ip_address, str(self.servo_port))
             if self.command_fd == -1:
-                Logger.instance().error(f"[{self.name}] connect failed: command socket is None")
+                Logger.instance().error(f"[{self.name}] connect failed: command socket ({self.command_port})")
                 self.is_connected = False
                 return False
+            self.servo_fd = nrc_interface.connect_robot(self.ip_address, str(self.servo_port))
             if self.servo_fd == -1:
-                Logger.instance().error(f"[{self.name}] connect failed: servo socket is None")
+                nrc_interface.disconnect_robot(self.command_fd)
+                self.command_fd = None
+                Logger.instance().error(f"[{self.name}] connect failed: servo socket ({self.servo_port})")
                 self.is_connected = False
                 return False
 

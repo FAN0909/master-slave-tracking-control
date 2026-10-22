@@ -841,16 +841,19 @@ class MainWindow(QMainWindow):
 
         # Stop the hand worker before its QThread is destroyed.
         Logger.instance().info("Closing hand thread...")
+        QMetaObject.invokeMethod(self.hand_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
         self.hand_thread.quit()
         self.hand_thread.wait()
 
         # Stop the slave arm thread
         Logger.instance().info("Closing slave arm thread...")
+        QMetaObject.invokeMethod(self.slave_arm_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
         self.slave_arm_thread.quit()
         self.slave_arm_thread.wait()
 
         # Stop the master arm thread
         Logger.instance().info("Closing master arm thread...")
+        QMetaObject.invokeMethod(self.master_arm_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
         self.master_arm_thread.quit()
         self.master_arm_thread.wait()
 

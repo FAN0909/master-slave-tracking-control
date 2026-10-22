@@ -489,13 +489,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_camera_device_side">
-                <item>
-                 <property name="text">
-                  <string>Camera 0</string>
-                 </property>
-                </item>
-               </widget>
+               <widget class="QComboBox" name="comboBox_camera_device_side"/>
               </item>
               <item>
                <widget class="QPushButton" name="pushButton_connect_side_camera">
@@ -554,13 +548,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_camera_device_front">
-                <item>
-                 <property name="text">
-                  <string>Camera 1</string>
-                 </property>
-                </item>
-               </widget>
+               <widget class="QComboBox" name="comboBox_camera_device_front"/>
               </item>
               <item>
                <widget class="QPushButton" name="pushButton_connect__front_camera">
@@ -619,13 +607,7 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_camera_device_hand">
-                <item>
-                 <property name="text">
-                  <string>Camera 2</string>
-                 </property>
-                </item>
-               </widget>
+               <widget class="QComboBox" name="comboBox_camera_device_hand"/>
               </item>
               <item>
                <widget class="QPushButton" name="pushButton_connect_camera_hand">

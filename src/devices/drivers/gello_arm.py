@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 from src.ui.log_stream import Logger
@@ -61,6 +62,23 @@ class GelloArm(BaseMasterArm):
 
     def Connect(self) -> bool:
         try:
+            # The bundled driver kills processes that own its serial port.
+            # Refuse the connection here before entering that SDK code.
+            if not Path(self.port).exists():
+                Logger.instance().error(f"[{self.name}] serial port does not exist: {self.port}")
+                return False
+            owner = subprocess.run(
+                ["lsof", "-t", self.port], capture_output=True, text=True, check=False
+            )
+            if owner.stdout.strip():
+                Logger.instance().error(
+                    f"[{self.name}] serial port {self.port} is in use by PID(s): "
+                    f"{', '.join(owner.stdout.split())}"
+                )
+                return False
+            if owner.returncode not in (0, 1):
+                Logger.instance().error(f"[{self.name}] cannot check serial port {self.port}: {owner.stderr.strip()}")
+                return False
             # 这里的调用方式和底层库签名一致，参数名与 __init__ 一一对应
             self.dynamixel_driver = DynamixelDriver(
                 ids=self.ids,

@@ -1,3 +1,4 @@
+# Python 3.12; runtime dependencies for the app and bundled drivers.
 numpy==2.2.6
 PySide6==6.11.2
 PyYAML==6.0.3

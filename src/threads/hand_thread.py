@@ -68,6 +68,11 @@ class HandThread(QObject):
             self.sig_disconnect_result.emit(False, f"[{self.hand.name}] failed to disconnect")
             Logger.instance().error(f"[{self.hand.name}] failed to disconnect")
             return False
+
+    @Slot()
+    def Shutdown(self):
+        if self.if_connected:
+            self.Disconnect()
         
     @Slot(list)
     def Set_joint_positions(self, positions: list) -> bool:
