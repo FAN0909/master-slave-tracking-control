@@ -1,10 +1,12 @@
 import math
+from time import monotonic_ns
 
 from src.ui.log_stream import Logger
 
 from PySide6.QtCore import QObject, Signal, Slot, QTimer, Qt
 from src.devices.drivers_factory import create_slave_arm
-from src.shared_data.robot_share_data import RobotSharedMemory
+from src.shared_data.robot_share_data import RobotSharedMemory, SlaveState
+from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.controller.teleop_controller import MasterSlaveTeleopCalculator
 class SlaveRobotThread(QObject):
 
@@ -18,10 +20,12 @@ class SlaveRobotThread(QObject):
         sig_hand_closed_changed = Signal(bool)
         sig_movej_result = Signal(bool, str)
 
-        def __init__(self, shared_data: RobotSharedMemory):
+        def __init__(self, shared_data: RobotSharedMemory,
+                     capture_buffer: CaptureRingBuffer[SlaveState]):
             super().__init__()
             self.arm = None
             self.shared_data = shared_data
+            self.capture_buffer = capture_buffer
             self.if_connected = False
             self.if_power_on = False
             self.if_servoj_open = False
@@ -88,10 +92,17 @@ class SlaveRobotThread(QObject):
                 self.timer_read_pos.stop()
 
         def OnTimerTriggeredReadPos(self):
+            if not self.if_connected or self.arm is None:
+                return
             joint_pos = self.arm.Get_joint_positions()
-            tcp_pos = self.arm.Get_tcp_positions()   
+            tcp_pos = self.arm.Get_tcp_positions()
+            sample_timestamp_ns = monotonic_ns()
 
             self.shared_data.slave.update_partial(joints=joint_pos, tcp=tcp_pos)
+            self.capture_buffer.append(
+                SlaveState(joints=joint_pos.copy(), tcp=tcp_pos.copy(), name=self.arm.name),
+                sample_timestamp_ns,
+            )
 
             self.sig_joint_positions.emit(joint_pos)
             self.sig_tcp_positions.emit(tcp_pos)
@@ -102,6 +113,7 @@ class SlaveRobotThread(QObject):
             if self.arm.Connect():
                 self.reset_shared_positions()
                 self.shared_data.slave.update_partial(name=self.arm.name)
+                self.capture_buffer.clear()
                 self.if_connected = True
                 self.sig_connect_result.emit(True, "connected successfully")
                 return True
@@ -123,6 +135,7 @@ class SlaveRobotThread(QObject):
                 self.if_power_on = False
                 self.if_servoj_open = False
                 self.servo_target_positions = None
+                self.capture_buffer.clear()
                 self.sig_disconnect_result.emit(True, "disconnected successfully")
                 return True
             else:

@@ -18,6 +18,7 @@ from src.threads.hand_thread import HandThread
 from src.threads.camera_thread import CameraThread
 from serial.tools import list_ports
 from src.shared_data.robot_share_data import RobotSharedMemory
+from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.devices.drivers.Link_hand import LinkHand
 
 STYLE_PATH = Path(__file__).resolve().parent / "src" / "res" / "style" / "main_window.qss"
@@ -143,9 +144,16 @@ class MainWindow(QMainWindow):
         #test
 #region========================================camera====================================================
     def init_camera_threads(self):
+        # 每路相机只缓存最近 5 帧，供后续采集线程按时间戳读取。
+        self.camera_capture_buffers = {
+            "side": CaptureRingBuffer(5),
+            "front": CaptureRingBuffer(5),
+            "hand": CaptureRingBuffer(5),
+        }
+
         # Side camera
         self.side_camera_thread = QThread(self)
-        self.side_camera_worker = CameraThread()
+        self.side_camera_worker = CameraThread(self.camera_capture_buffers["side"])
         self.side_camera_worker.moveToThread(self.side_camera_thread)
         self.side_camera_thread.finished.connect(self.side_camera_worker.deleteLater)
         self.sig_request_side_camera_connect.connect(self.side_camera_worker.ConnectCamera)
@@ -157,7 +165,7 @@ class MainWindow(QMainWindow):
 
         # Front camera
         self.front_camera_thread = QThread(self)
-        self.front_camera_worker = CameraThread()
+        self.front_camera_worker = CameraThread(self.camera_capture_buffers["front"])
         self.front_camera_worker.moveToThread(self.front_camera_thread)
         self.front_camera_thread.finished.connect(self.front_camera_worker.deleteLater)
         self.sig_request_front_camera_connect.connect(self.front_camera_worker.ConnectCamera)
@@ -169,7 +177,7 @@ class MainWindow(QMainWindow):
 
         # Hand camera
         self.hand_camera_thread = QThread(self)
-        self.hand_camera_worker = CameraThread()
+        self.hand_camera_worker = CameraThread(self.camera_capture_buffers["hand"])
         self.hand_camera_worker.moveToThread(self.hand_camera_thread)
         self.hand_camera_thread.finished.connect(self.hand_camera_worker.deleteLater)
         self.sig_request_hand_camera_connect.connect(self.hand_camera_worker.ConnectCamera)
@@ -689,7 +697,8 @@ class MainWindow(QMainWindow):
     def init_slave_arm_thread(self):
         # ================= 核心：moveToThread 组装 =================
         self.slave_arm_thread = QThread()
-        self.slave_arm_worker = SlaveRobotThread(self.shared_robot_data)
+        self.slave_capture_buffer = CaptureRingBuffer(100)
+        self.slave_arm_worker = SlaveRobotThread(self.shared_robot_data, self.slave_capture_buffer)
         self.slave_arm_worker.moveToThread(self.slave_arm_thread)
         # ==========================================================
 
