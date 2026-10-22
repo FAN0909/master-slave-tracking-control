@@ -1,3 +1,5 @@
+import math
+
 from src.devices.base.base_hand import BaseHand
 from vendor.linkerhand_python_sdk.LinkerHand.linker_hand_api import LinkerHandApi
 from src.ui.log_stream import Logger
@@ -85,6 +87,26 @@ class LinkHand(BaseHand):
         except Exception as e:
             Logger.instance().error(f"[{self.name}] set joint positions failed: {e}")
             return False
+
+    def Get_joint_positions(self) -> list:
+        """读取灵巧手当前关节位置；读取失败时返回空列表。"""
+        if not self.is_connected or self.hand_api is None:
+            Logger.instance().error(f"[{self.name}] hand API not connected")
+            return []
+
+        try:
+            positions = self.hand_api.get_state()
+            if positions is None:
+                raise ValueError("SDK returned no joint positions")
+            joint_positions = [float(value) for value in positions]
+            if len(joint_positions) != self.MAX_JOINTS() or not all(
+                math.isfinite(value) for value in joint_positions
+            ):
+                raise ValueError(f"invalid joint positions: {joint_positions}")
+            return joint_positions
+        except Exception as error:
+            Logger.instance().error(f"[{self.name}] get joint positions failed: {error}")
+            return []
 
     def Set_speed(self, speed=[100]*5) -> bool:
         # Implement the logic to set speed for LinkHandO6

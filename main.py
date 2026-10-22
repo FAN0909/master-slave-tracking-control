@@ -471,7 +471,8 @@ class MainWindow(QMainWindow):
 #region===================hand thread=========================
     def init_hand_thread(self):
         self.hand_thread = QThread()
-        self.hand_worker = HandThread(self.shared_robot_data)
+        self.hand_capture_buffer = CaptureRingBuffer(100)
+        self.hand_worker = HandThread(self.shared_robot_data, self.hand_capture_buffer)
         self.hand_worker.moveToThread(self.hand_thread)
 
         # Connect signals to the worker's slots
@@ -612,7 +613,10 @@ class MainWindow(QMainWindow):
         self.master_arm = create_master_arm("Gello", name="GelloArm", port="/dev/ttyUSB0")
 
         self.master_arm_thread = QThread()
-        self.master_arm_worker = MasterRobotThread(self.master_arm, self.shared_robot_data)
+        self.master_capture_buffer = CaptureRingBuffer(100)
+        self.master_arm_worker = MasterRobotThread(
+            self.master_arm, self.shared_robot_data, self.master_capture_buffer
+        )
         self.master_arm_worker.moveToThread(self.master_arm_thread)
 
         self.sig_request_master_connect.connect(self.master_arm_worker.Connect)
