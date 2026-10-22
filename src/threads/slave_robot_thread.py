@@ -129,6 +129,14 @@ class SlaveRobotThread(QObject):
                 return False
 
         @Slot()
+        def Shutdown(self):
+            """Stop both timers before this worker's thread exits."""
+            self.StopFollow()
+            self.StopTimer()
+            if self.if_connected:
+                self.Disconnect()
+
+        @Slot()
         def Enable(self) -> bool:
             if self.arm.Enable():
                 self.if_power_on = True

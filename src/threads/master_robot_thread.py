@@ -54,6 +54,7 @@ class MasterRobotThread(QObject):
             
         @Slot()
         def Disconnect(self) -> bool:
+            self.StopTimer()
             if self.arm.Disconnect():
                 self.if_connected = False
                 self.sig_disconnect_result.emit(True, "disconnected successfully")
@@ -61,6 +62,13 @@ class MasterRobotThread(QObject):
             else:
                 self.sig_disconnect_result.emit(False, "failed to disconnect")
                 return False
+
+        @Slot()
+        def Shutdown(self):
+            """Stop polling and release the arm in this worker's thread."""
+            self.StopTimer()
+            if self.if_connected:
+                self.Disconnect()
 
 
         def OnTimerTriggeredReadPos(self):
