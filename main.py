@@ -1,3 +1,5 @@
+import json
+import math
 import sys
 from pathlib import Path
 
@@ -32,6 +34,8 @@ class MainWindow(QMainWindow):
     sig_request_start_follow = Signal(int)
     sig_request_stop_follow = Signal()
     sig_request_sync_hand_trigger = Signal()
+    sig_request_movej = Signal(list)  # target_positions
+
 
     #define signals to request actions in the worker thread master_arm_worker
     sig_request_master_connect = Signal()
@@ -57,7 +61,6 @@ class MainWindow(QMainWindow):
     sig_request_open_servoj = Signal()
     sig_request_close_servoj = Signal()
     sig_request_move_servoj = Signal()
-    sig_request_movej = Signal(list, float, float, float)  # target_positions, speed, acceleration, deceleration
 
     def __init__(self):
         super().__init__()
@@ -124,6 +127,7 @@ class MainWindow(QMainWindow):
         #Bind button click command slave arm
         self.ui.Btn_robot_connect.clicked.connect(self.on_Btn_robot_connect_clicked)
         self.ui.pushButton_robot_PowerOn.clicked.connect(self.on_pushButton_robot_PowerOn_clicked)
+        self.ui.pushButton_slave_home_pos.clicked.connect(self.on_robot_home_clicked)
 
         #master arm click command
         self.ui.pushButton_connect_master_arm.clicked.connect(self.on_pushButton_master_connect_clicked)
@@ -699,6 +703,7 @@ class MainWindow(QMainWindow):
         self.sig_request_start_follow.connect(self.slave_arm_worker.StartFollow)
         self.sig_request_stop_follow.connect(self.slave_arm_worker.StopFollow)
         self.sig_request_sync_hand_trigger.connect(self.slave_arm_worker.SyncHandTriggerState)
+        self.sig_request_movej.connect(self.slave_arm_worker.MoveJ)
 
         # 5. 将 Worker 的结果信号 -> 连接到 MainWindow 的更新回调
         self.slave_arm_worker.sig_connect_result.connect(self.on_connect_result)
@@ -708,12 +713,12 @@ class MainWindow(QMainWindow):
         self.slave_arm_worker.sig_joint_positions.connect(self.on_joint_positions_updated)
         self.slave_arm_worker.sig_tcp_positions.connect(self.on_tcp_positions_updated)
         self.slave_arm_worker.sig_follow_result.connect(self.on_follow_result)
+        self.slave_arm_worker.sig_movej_result.connect(self.on_robot_home_result)
 
         #test
         self.sig_request_open_servoj.connect(self.slave_arm_worker.OpenServoJ)
         self.sig_request_close_servoj.connect(self.slave_arm_worker.CloseServoJ)
         self.sig_request_move_servoj.connect(self.slave_arm_worker.testservoj)
-        self.sig_request_movej.connect(self.slave_arm_worker.MoveJ)
 
         self.slave_arm_thread.start()
 
@@ -748,6 +753,41 @@ class MainWindow(QMainWindow):
         else:
             self.ui.statusbar.showMessage("Enabling...")
             self.sig_request_enable.emit()      
+
+    def on_robot_home_clicked(self):
+        if not self.if_slave_connected or not self.if_slave_power_on or self.if_start_follow:
+            message = "请先连接并上电从手，停止跟随后再执行 RobotHome"
+            Logger.instance().error(message)
+            self.ui.statusbar.showMessage(message)
+            return
+
+        try:
+            with self.settings_dialog.CONFIG_PATH.open(encoding="utf-8") as file:
+                config = json.load(file)
+            slave_name = self.shared_robot_data.slave.read().name
+            values = config[slave_name]["HOME_JOINTS"]
+            joint_count = config[slave_name]["MAX_JOINT_COUNT"]
+            if (not isinstance(values, list) or len(values) != joint_count
+                    or any(type(value) not in (int, float) or not math.isfinite(value)
+                           for value in values)):
+                raise ValueError(f"HOME_JOINTS 需要 {joint_count} 个有限的关节角度")
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            message = f"RobotHome 未执行，先在设置界面保存 Home Pos：{error}"
+            Logger.instance().error(message)
+            self.ui.statusbar.showMessage(message)
+            return
+
+        self.ui.pushButton_slave_home_pos.setEnabled(False)
+        self.ui.statusbar.showMessage("正在发送 RobotHome 指令...")
+        self.sig_request_movej.emit(values)
+
+    def on_robot_home_result(self, success, message):
+        self.ui.pushButton_slave_home_pos.setEnabled(True)
+        self.ui.statusbar.showMessage(message)
+        if success:
+            Logger.instance().info(message)
+        else:
+            Logger.instance().error(message)
 
 
     def on_pushButton_robot_ReadPos_clicked(self):

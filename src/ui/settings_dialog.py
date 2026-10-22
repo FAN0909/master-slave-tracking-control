@@ -50,7 +50,40 @@ class SettingsDialog(QDialog):
         table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         table.itemSelectionChanged.connect(self.update_delete_hand_action_button)
         self.ui.comboBox_hand_model_settings.currentTextChanged.connect(self.on_hand_model_changed)
+        self.load_slave_param()
         self.refresh_hand_actions()
+
+    def _selected_slave_name(self, config):
+        name = self.shared_data.slave.read().name
+        if not name and self.parent() is not None:
+            combo = getattr(getattr(self.parent(), "ui", None), "comboBox_robot_type", None)
+            if combo is not None:
+                name = combo.currentText().strip()
+        if not name and len(config) == 1:
+            name = next(iter(config))
+        if name not in config:
+            raise ValueError(f"配置文件中没有 {name or '当前从手'} 的配置")
+        return name
+
+    def load_slave_param(self):
+        """Show the saved parameters and home joint angles."""
+        try:
+            with self.CONFIG_PATH.open(encoding="utf-8") as file:
+                config = json.load(file)
+            values = config[self._selected_slave_name(config)]
+            for widget_name, key in (
+                ("lineEdit_slave_arm_vel", "SERVO_J_VMAX"),
+                ("lineEdit_slave_arm_acc", "SERVO_J_AVMAX"),
+                ("lineEdit_slave_arm_jerk", "SERVO_J_JMAX"),
+            ):
+                getattr(self.ui, widget_name).setText(str(values[key]))
+            home = values.get("HOME_JOINTS", [])
+            for index in range(7):
+                getattr(self.ui, f"lineEdit_slave_home_joint{index}").setText(
+                    str(home[index]) if isinstance(home, list) and len(home) == 7 else ""
+                )
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            Logger.instance().error(f"读取从手设置失败: {error}")
 
     def update_delete_hand_action_button(self):
         """只有选中动作行且已有显示型号时才允许删除。"""
@@ -374,11 +407,7 @@ class SettingsDialog(QDialog):
         return True
 
     def save_slave_param(self):
-        """读取当前从手参数并保存到配置文件。"""
-        slave_name = self.shared_data.slave.read().name
-        if not slave_name:
-            Logger.instance().error("从手设备名称为空，请先连接从手再保存参数")
-            return
+        """Save seven home joints and motion parameters atomically."""
         try:
             velocity = float(self.ui.lineEdit_slave_arm_vel.text().strip())
             acceleration = float(self.ui.lineEdit_slave_arm_acc.text().strip())
@@ -387,19 +416,29 @@ class SettingsDialog(QDialog):
                 raise ValueError
         except ValueError:
             Logger.instance().error("从手速度、加速度、加加速度必须是有限的正数")
-            return
+            return False
 
-        # 只更新当前连接从手的三个运动参数，保留其他配置项。
+        try:
+            home_joints = [
+                float(getattr(self.ui, f"lineEdit_slave_home_joint{index}").text().strip())
+                for index in range(7)
+            ]
+            if not all(math.isfinite(value) for value in home_joints):
+                raise ValueError
+        except ValueError:
+            Logger.instance().error("Home Pos 必须填写 7 个有限的关节角度（°）")
+            return False
+
         params = {
             "SERVO_J_VMAX": velocity,
             "SERVO_J_AVMAX": acceleration,
             "SERVO_J_JMAX": jerk,
+            "HOME_JOINTS": home_joints,
         }
         try:
             with self.CONFIG_PATH.open(encoding="utf-8") as file:
                 config = json.load(file)
-            if slave_name not in config:
-                raise ValueError(f"配置文件中没有 {slave_name} 的从手配置")
+            slave_name = self._selected_slave_name(config)
             config[slave_name].update(params)
             content = (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
             # 原子写入，避免写入失败时留下不完整的配置文件。
@@ -414,9 +453,10 @@ class SettingsDialog(QDialog):
                 raise OSError(file.errorString())
         except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
             Logger.instance().error(f"从手参数保存失败: {error}")
-            return
+            return False
 
         self.slave_params = params
         Logger.instance().info(
-            f"{slave_name} 从手参数已保存：速度={velocity}，加速度={acceleration}，加加速度={jerk}"
+            f"{slave_name} 从手参数及 7 个 Home Pos 角度已保存"
         )
+        return True

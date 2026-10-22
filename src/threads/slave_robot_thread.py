@@ -16,6 +16,7 @@ class SlaveRobotThread(QObject):
         sig_tcp_positions = Signal(list)
         sig_follow_result = Signal(bool)
         sig_hand_closed_changed = Signal(bool)
+        sig_movej_result = Signal(bool, str)
 
         def __init__(self, shared_data: RobotSharedMemory):
             super().__init__()
@@ -172,12 +173,35 @@ class SlaveRobotThread(QObject):
             else:
                 return False
 
-        @Slot()
-        def MoveJ(self, target_positions: list, speed: float, acceleration: float, deceleration: float) -> bool:
-            if self.arm.Move_j(target_positions, speed, acceleration, deceleration):
-                return True
-            else:
+        @Slot(list)
+        def MoveJ(self, target_positions: list, speed: float = 80,
+                  acceleration: float = 80, deceleration: float = 80) -> bool:
+            if not self.if_connected or not self.if_power_on or self.arm is None:
+                self.sig_movej_result.emit(False, "从手未连接或未上电")
                 return False
+            if self.if_running_follow:
+                self.sig_movej_result.emit(False, "请先停止跟随，再执行 RobotHome")
+                return False
+            if (len(target_positions) != self.arm.MAX_JOINT_COUNT
+                    or any(not isinstance(value, (int, float)) or not math.isfinite(value)
+                           for value in target_positions)):
+                self.sig_movej_result.emit(False, "Home Pos 关节角度无效")
+                return False
+            if any(not math.isfinite(value) or value <= 0
+                   for value in (speed, acceleration, deceleration)):
+                self.sig_movej_result.emit(False, "MoveJ 速度和加减速度必须为正数")
+                return False
+            try:
+                if self.if_servoj_open and not self.CloseServoJ():
+                    self.sig_movej_result.emit(False, "关闭 ServoJ 失败，未执行 RobotHome")
+                    return False
+                success = self.arm.Move_j(target_positions, speed, acceleration, deceleration)
+            except Exception as error:
+                self.sig_movej_result.emit(False, f"RobotHome 指令失败: {error}")
+                return False
+            message = "RobotHome 指令已发送" if success else "RobotHome 指令发送失败"
+            self.sig_movej_result.emit(success, message)
+            return success
 
 
         def testservoj(self):

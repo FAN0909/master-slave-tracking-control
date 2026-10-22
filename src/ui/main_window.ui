@@ -345,6 +345,13 @@
           </layout>
          </item>
          <item>
+          <widget class="QPushButton" name="pushButton_slave_home_pos">
+           <property name="text">
+            <string>RobotHome</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="label_follow_hint">
            <property name="text">
             <string>连接主手、从手和灵巧手后可启动跟随</string>

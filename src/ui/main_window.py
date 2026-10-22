@@ -248,6 +248,11 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_follow_control.addLayout(self.horizontalLayout_follow_start)
 
+        self.pushButton_slave_home_pos = QPushButton(self.groupBox_follow_control)
+        self.pushButton_slave_home_pos.setObjectName(u"pushButton_slave_home_pos")
+
+        self.verticalLayout_follow_control.addWidget(self.pushButton_slave_home_pos)
+
         self.label_follow_hint = QLabel(self.groupBox_follow_control)
         self.label_follow_hint.setObjectName(u"label_follow_hint")
         self.label_follow_hint.setWordWrap(True)
@@ -562,6 +567,7 @@ class Ui_MainWindow(object):
         self.pushButton_start_follow.setText(QCoreApplication.translate("MainWindow", u"Start Follow", None))
         self.label_follow_interval.setText(QCoreApplication.translate("MainWindow", u"Interval (ms)", None))
         self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
+        self.pushButton_slave_home_pos.setText(QCoreApplication.translate("MainWindow", u"RobotHome", None))
         self.label_follow_hint.setText(QCoreApplication.translate("MainWindow", u"\u8fde\u63a5\u4e3b\u624b\u3001\u4ece\u624b\u548c\u7075\u5de7\u624b\u540e\u53ef\u542f\u52a8\u8ddf\u968f", None))
         self.label_follow_spacer.setText("")
         self.groupBox_camera_monitor.setTitle(QCoreApplication.translate("MainWindow", u"Camera Monitoring (3 Live Feeds)", None))
