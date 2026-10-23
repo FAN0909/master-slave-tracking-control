@@ -75,6 +75,50 @@ class DataSynchronizerTest(unittest.TestCase):
         self.assertEqual(self.synchronizer.overflow_count, 1)
         self.assertEqual(len(errors), 1)
 
+    def test_missing_camera_reports_its_age_and_stops(self):
+        self.fill_streams(1_040_000_000)
+        self.hand_action.append([5], 1_000_000_000)
+        errors = []
+        self.synchronizer.sig_error.connect(errors.append)
+        with patch("src.recording.data_synchronizer.monotonic_ns", side_effect=[
+            1_000_000_000, 1_050_000_000, 1_100_000_000, 1_150_000_000,
+        ]):
+            self.assertTrue(self.synchronizer.start())
+            self.synchronizer.collect_once()
+            self.synchronizer.output_queue.get_nowait()
+            self.cameras["front"].append(np.zeros((2, 2, 3), dtype=np.uint8), 1_140_000_000)
+            self.master.append(MasterState([1.0], []), 1_140_000_000)
+            self.slave.append(SlaveState([2.0], []), 1_140_000_000)
+            self.hand.append(HandState([3.0]), 1_140_000_000)
+            self.cameras["hand"].append(np.zeros((2, 2, 3), dtype=np.uint8), 1_140_000_000)
+            self.slave_action.append([4.0], 1_140_000_000)
+            self.synchronizer.collect_once()
+            self.synchronizer.output_queue.get_nowait()
+            self.synchronizer.collect_once()
+
+        self.assertFalse(self.synchronizer.timer.isActive())
+        self.assertEqual(self.synchronizer.skipped_count, 1)
+        self.assertEqual(self.synchronizer.output_queue.qsize(), 0)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("side_camera 过期 110.0 ms（上限 100 ms）", errors[0])
+
+    def test_late_timer_reports_skipped_tick_and_stops(self):
+        self.fill_streams(1_040_000_000)
+        self.hand_action.append([5], 1_000_000_000)
+        errors = []
+        self.synchronizer.sig_error.connect(errors.append)
+        with patch("src.recording.data_synchronizer.monotonic_ns", side_effect=[
+            1_000_000_000, 1_050_000_000, 1_150_000_000,
+        ]):
+            self.assertTrue(self.synchronizer.start())
+            self.synchronizer.collect_once()
+            self.synchronizer.collect_once()
+
+        self.assertFalse(self.synchronizer.timer.isActive())
+        self.assertEqual(self.synchronizer.skipped_count, 1)
+        self.assertEqual(self.synchronizer.output_queue.qsize(), 1)
+        self.assertEqual(errors, ["同步定时器延迟，跳过 1 帧（当前 tick 3）"])
+
 
 if __name__ == "__main__":
     unittest.main()
