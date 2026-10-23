@@ -552,10 +552,10 @@ class Ui_SettingsDialog(object):
 
         self.horizontalLayout_hand_model.addWidget(self.label_hand_model_settings)
 
-        self.comboBox_hand_model_settings = QComboBox(self.groupBox_3)
-        self.comboBox_hand_model_settings.setObjectName(u"comboBox_hand_model_settings")
+        self.label_hand_model_value = QLabel(self.groupBox_3)
+        self.label_hand_model_value.setObjectName(u"label_hand_model_value")
 
-        self.horizontalLayout_hand_model.addWidget(self.comboBox_hand_model_settings)
+        self.horizontalLayout_hand_model.addWidget(self.label_hand_model_value)
 
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_hand_model)
@@ -734,6 +734,7 @@ class Ui_SettingsDialog(object):
         self.tabWidget_settings.setTabText(self.tabWidget_settings.indexOf(self.tab_cameraset), QCoreApplication.translate("SettingsDialog", u"Camera Set", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("SettingsDialog", u"Actions", None))
         self.label_hand_model_settings.setText(QCoreApplication.translate("SettingsDialog", u"\u578b\u53f7", None))
+        self.label_hand_model_value.setText(QCoreApplication.translate("SettingsDialog", u"\u672a\u9009\u62e9", None))
         ___qtablewidgetitem = self.tableWidget_hand_actions.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("SettingsDialog", u"\u52a8\u4f5c\u540d\u79f0", None))
         self.label_6.setText(QCoreApplication.translate("SettingsDialog", u"Set Current Actions", None))

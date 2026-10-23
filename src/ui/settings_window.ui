@@ -698,7 +698,11 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_hand_model_settings"/>
+               <widget class="QLabel" name="label_hand_model_value">
+                <property name="text">
+                 <string>未选择</string>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
