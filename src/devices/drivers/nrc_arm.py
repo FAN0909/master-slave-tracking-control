@@ -4,7 +4,9 @@ from pathlib import Path
 
 from src.ui.log_stream import Logger
 from src.devices.base.base_robotArm import BaseRobotArm
-from vendor.nrc import nrc_interface
+
+# NRC 的原生扩展依赖系统库；连接 NRC 时再加载，避免它阻断整个界面启动。
+nrc_interface = None
 
 class NrcArm(BaseRobotArm):
 
@@ -30,6 +32,7 @@ class NrcArm(BaseRobotArm):
         self.command_fd = None
         self.is_connected = False
         self.is_enabled = False
+        self.last_error = ""
 
     def _load_config(self, path):
         """创建驱动和连接前读取配置，跟随循环不访问磁盘。"""
@@ -56,19 +59,26 @@ class NrcArm(BaseRobotArm):
 
     #region command 6001 port control
     def Connect(self) -> bool:
+        global nrc_interface
         try:
+            self.last_error = ""
+            if nrc_interface is None:
+                from vendor.nrc import nrc_interface as sdk
+                nrc_interface = sdk
             self._load_config(self.config_path)
             Logger.instance().info(f"[{self.name}] connecting to {self.ip_address}:{self.command_port} and {self.servo_port}...")
             self.command_fd = nrc_interface.connect_robot(self.ip_address, str(self.command_port))
             if self.command_fd == -1:
-                Logger.instance().error(f"[{self.name}] connect failed: command socket ({self.command_port})")
+                self.last_error = f"NRC 连接失败：命令端口 {self.command_port} 无法连接"
+                Logger.instance().error(f"[{self.name}] {self.last_error}")
                 self.is_connected = False
                 return False
             self.servo_fd = nrc_interface.connect_robot(self.ip_address, str(self.servo_port))
             if self.servo_fd == -1:
                 nrc_interface.disconnect_robot(self.command_fd)
                 self.command_fd = None
-                Logger.instance().error(f"[{self.name}] connect failed: servo socket ({self.servo_port})")
+                self.last_error = f"NRC 连接失败：伺服端口 {self.servo_port} 无法连接"
+                Logger.instance().error(f"[{self.name}] {self.last_error}")
                 self.is_connected = False
                 return False
 
@@ -77,7 +87,10 @@ class NrcArm(BaseRobotArm):
             self.is_connected = True
             return True
         except Exception as e:
-            Logger.instance().error(f"[{self.name}] connect failed: {e}")
+            self.last_error = f"NRC 连接失败：{e}"
+            if isinstance(e, (ImportError, OSError)):
+                self.last_error += "；请检查 Python 3.12、系统架构及 ldd vendor/nrc/_nrc_host.so"
+            Logger.instance().error(f"[{self.name}] {self.last_error}")
             self.is_connected = False
             return False
 

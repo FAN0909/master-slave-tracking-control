@@ -121,7 +121,7 @@ class SlaveRobotThread(QObject):
                 self.sig_connect_result.emit(True, "connected successfully")
                 return True
             else:
-                self.sig_connect_result.emit(False, "failed to connect")
+                self.sig_connect_result.emit(False, getattr(self.arm, "last_error", "failed to connect"))
                 return False
             
         @Slot()
