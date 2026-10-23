@@ -15,8 +15,8 @@
     },
     "default_speed": 255,
     "default_force": 255,
-    "current_close": "open1",
-    "current_open": "close1",
+    "current_close": "close1",
+    "current_open": "open1",
     "actions": {
       "open": {
         "description": "完全张开",
@@ -51,8 +51,8 @@
         "positions": [
           157,
           40,
-          110,
-          110,
+          175,
+          175,
           0,
           0
         ]
@@ -64,8 +64,8 @@
         "positions": [
           138,
           55,
-          139,
-          139,
+          110,
+          110,
           0,
           0
         ]
