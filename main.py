@@ -3,7 +3,7 @@ import math
 import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QLineEdit
+from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QLineEdit
 from PySide6.QtCore import QMetaObject, Qt, QThread, Signal, Slot, QTimer
 from PySide6.QtGui import QImage, QPixmap
 
@@ -68,16 +68,6 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        for label in (self.ui.label_master_status, self.ui.label_slave_status):
-            label.setProperty("uiRole", "armStatus")
-        for index in range(1, 4):
-            getattr(self.ui, f"label_camera_status_{index}").setProperty("uiRole", "armStatus")
-            getattr(self.ui, f"label_camera_preview_{index}").setProperty("uiRole", "cameraPreview")
-        style = STYLE_PATH.read_text(encoding="utf-8")
-        self.setStyleSheet(style.replace("__STYLE_DIR__", STYLE_PATH.parent.as_posix()))
-        self.shared_robot_data = RobotSharedMemory()
-        self.settings_dialog = SettingsDialog(self.shared_robot_data, self)
-        self.init_log_window()
 
         self.if_master_connected = False
         self.if_slave_connected = False
@@ -86,9 +76,11 @@ class MainWindow(QMainWindow):
         self.if_side_camera_connected = False
         self.if_front_camera_connected = False
         self.if_hand_camera_connected = False
-
         self.if_start_follow = False
 
+        #init share memory
+        self.shared_robot_data = RobotSharedMemory()
+        
         self.init_ui_state()
         self.init_camera_ui()
 
@@ -122,6 +114,24 @@ class MainWindow(QMainWindow):
 
 
     def init_ui_state(self):
+        #init ui style
+        style = STYLE_PATH.read_text(encoding="utf-8")
+        self.setStyleSheet(style.replace("__STYLE_DIR__", STYLE_PATH.parent.as_posix()))
+
+        #init recod path
+        self.ui.lineEdit_save_file_path.setText(str(Path(__file__).resolve().parent / "data_recod"))
+        self.ui.pushButton_browse_save_path.clicked.connect(self.choose_save_path)
+
+        #init device statue lable
+        for label in (self.ui.label_master_status, self.ui.label_slave_status):
+            label.setProperty("uiRole", "armStatus")
+        for index in range(1, 4):
+            getattr(self.ui, f"label_camera_status_{index}").setProperty("uiRole", "armStatus")
+            getattr(self.ui, f"label_camera_preview_{index}").setProperty("uiRole", "cameraPreview")
+        self.settings_dialog = SettingsDialog(self.shared_robot_data, self)
+       
+        self.init_log_window()
+
         self.ui.menuSet_Param.triggered.connect(self.show_settings)
         self._set_arm_status(self.ui.label_master_status, "disconnected")
         self._set_arm_status(self.ui.label_slave_status, "disconnected")
@@ -142,6 +152,14 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
   
         #test
+
+    def choose_save_path(self):
+        current_path = Path(self.ui.lineEdit_save_file_path.text().strip()).expanduser()
+        initial_dir = current_path if current_path.is_dir() else current_path.parent
+        selected_dir = QFileDialog.getExistingDirectory(self, "选择保存目录", str(initial_dir))
+        if selected_dir:
+            self.ui.lineEdit_save_file_path.setText(selected_dir)
+
 #region========================================camera====================================================
     def init_camera_threads(self):
         # 每路相机只缓存最近 5 帧，供后续采集线程按时间戳读取。
@@ -453,6 +471,7 @@ class MainWindow(QMainWindow):
         self.settings_dialog.activateWindow()
 
     def init_thread(self):
+
         #init slave arm thread
         self.init_slave_arm_thread() 
 
@@ -472,7 +491,10 @@ class MainWindow(QMainWindow):
     def init_hand_thread(self):
         self.hand_thread = QThread()
         self.hand_capture_buffer = CaptureRingBuffer(100)
-        self.hand_worker = HandThread(self.shared_robot_data, self.hand_capture_buffer)
+        self.hand_action_buffer = CaptureRingBuffer(100)
+        self.hand_worker = HandThread(
+            self.shared_robot_data, self.hand_capture_buffer, self.hand_action_buffer
+        )
         self.hand_worker.moveToThread(self.hand_thread)
 
         # Connect signals to the worker's slots
@@ -702,7 +724,10 @@ class MainWindow(QMainWindow):
         # ================= 核心：moveToThread 组装 =================
         self.slave_arm_thread = QThread()
         self.slave_capture_buffer = CaptureRingBuffer(100)
-        self.slave_arm_worker = SlaveRobotThread(self.shared_robot_data, self.slave_capture_buffer)
+        self.slave_action_buffer = CaptureRingBuffer(100)
+        self.slave_arm_worker = SlaveRobotThread(
+            self.shared_robot_data, self.slave_capture_buffer, self.slave_action_buffer
+        )
         self.slave_arm_worker.moveToThread(self.slave_arm_thread)
         # ==========================================================
 

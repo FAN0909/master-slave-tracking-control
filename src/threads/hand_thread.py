@@ -14,11 +14,13 @@ class HandThread(QObject):
     sig_disconnect_result = Signal(bool, str)
 
     def __init__(self, shared_data: RobotSharedMemory,
-                 capture_buffer: CaptureRingBuffer[HandState]):
+                 capture_buffer: CaptureRingBuffer[HandState],
+                 action_buffer: CaptureRingBuffer[list[int]]):
         super().__init__()
         self.hand = None
         self.shared_data = shared_data
         self.capture_buffer = capture_buffer
+        self.action_buffer = action_buffer
         self.if_connected = False
         self.timer_read_pos = QTimer(self)
         self.timer_read_pos.setInterval(20)
@@ -72,6 +74,7 @@ class HandThread(QObject):
             self.if_connected = True
             self.shared_data.hand.update_partial(name=hand_model, joints=[])
             self.capture_buffer.clear()
+            self.action_buffer.clear()
             self.timer_read_pos.start()
             self.sig_connect_result.emit(True, f"[{self.hand.name}] connected successfully")
             return True
@@ -91,6 +94,7 @@ class HandThread(QObject):
             self.if_connected = False
             self.shared_data.hand.update_partial(name="", joints=[])
             self.capture_buffer.clear()
+            self.action_buffer.clear()
             self.sig_disconnect_result.emit(True, f"[{self.hand.name}] disconnected successfully")
             return True
         else:
@@ -150,6 +154,8 @@ class HandThread(QObject):
             force = action.get("force", hand_config.get("default_force", 255))
             self._execute_action(hand_model, action_name, action["positions"], speed, force,
                                  hand_config["position_range"])
+            # 只记录成功下发的跟随目标位置；设置页测试动作不进入训练数据。
+            self.action_buffer.append(action["positions"].copy(), monotonic_ns())
             Logger.instance().info(f"[{hand_model}] 扳机执行 {action_kind}: {action_name}")
             return True
         except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError) as error:

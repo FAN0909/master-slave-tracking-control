@@ -88,6 +88,33 @@ class CaptureRingBuffer(Generic[T]):
                 return None
             return sample
 
+    def latest_before_or_at(self, timestamp_ns: int,
+                            max_age_ns: int | None = None) -> CaptureSample[T] | None:
+        """返回指定时间及之前最新的样本，不会取到未来数据。
+
+        max_age_ns 是允许的最大样本年龄，单位纳秒；不传则允许持续使用
+        最后一次命令，适合 Hand 这类只在状态变化时下发的 action。
+        缓存为空、没有符合时间条件的样本或样本过旧时返回 None。
+        """
+        if isinstance(timestamp_ns, bool) or not isinstance(timestamp_ns, int) or timestamp_ns < 0:
+            raise ValueError("timestamp_ns must be a non-negative integer")
+        if max_age_ns is not None and (
+            isinstance(max_age_ns, bool) or not isinstance(max_age_ns, int) or max_age_ns < 0
+        ):
+            raise ValueError("max_age_ns must be a non-negative integer")
+        with self._lock:
+            sample = None
+            for item in reversed(self._samples):
+                if item.timestamp_ns <= timestamp_ns and (
+                    sample is None or item.timestamp_ns > sample.timestamp_ns
+                ):
+                    sample = item
+            if sample is None:
+                return None
+            if max_age_ns is not None and timestamp_ns - sample.timestamp_ns > max_age_ns:
+                return None
+            return sample
+
     def clear(self) -> None:
         """清空所有样本，并将覆盖计数归零。"""
         with self._lock:

@@ -21,11 +21,13 @@ class SlaveRobotThread(QObject):
         sig_movej_result = Signal(bool, str)
 
         def __init__(self, shared_data: RobotSharedMemory,
-                     capture_buffer: CaptureRingBuffer[SlaveState]):
+                     capture_buffer: CaptureRingBuffer[SlaveState],
+                     action_buffer: CaptureRingBuffer[list[float]]):
             super().__init__()
             self.arm = None
             self.shared_data = shared_data
             self.capture_buffer = capture_buffer
+            self.action_buffer = action_buffer
             self.if_connected = False
             self.if_power_on = False
             self.if_servoj_open = False
@@ -114,6 +116,7 @@ class SlaveRobotThread(QObject):
                 self.reset_shared_positions()
                 self.shared_data.slave.update_partial(name=self.arm.name)
                 self.capture_buffer.clear()
+                self.action_buffer.clear()
                 self.if_connected = True
                 self.sig_connect_result.emit(True, "connected successfully")
                 return True
@@ -136,6 +139,7 @@ class SlaveRobotThread(QObject):
                 self.if_servoj_open = False
                 self.servo_target_positions = None
                 self.capture_buffer.clear()
+                self.action_buffer.clear()
                 self.sig_disconnect_result.emit(True, "disconnected successfully")
                 return True
             else:
@@ -319,4 +323,5 @@ class SlaveRobotThread(QObject):
                 for target, d in zip(self.servo_target_positions, delta)
             ]
             target = list(self.servo_target_positions)
-            self.arm.Set_servoJ_pos(target)
+            if self.arm.Set_servoJ_pos(target):
+                self.action_buffer.append(target.copy(), monotonic_ns())
