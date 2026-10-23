@@ -6,7 +6,7 @@ from pathlib import Path
 from time import monotonic_ns
 
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QLineEdit
-from PySide6.QtCore import QMetaObject, Qt, QThread, Signal, Slot, QTimer
+from PySide6.QtCore import QMetaObject, QSignalBlocker, Qt, QThread, Signal, Slot, QTimer
 from PySide6.QtGui import QImage, QPixmap
 
 from src.ui.main_window import Ui_MainWindow
@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
     sig_request_close_servoj = Signal()
     sig_request_move_servoj = Signal()
 
+#region================= 主窗口初始化 =================
     def __init__(self):
         super().__init__()
 
@@ -92,6 +93,9 @@ class MainWindow(QMainWindow):
         self.init_recording()
 
 
+#endregion================= 主窗口初始化 =================
+
+#region================= 日志窗口 =================
     def init_log_window(self):
         self.logger = Logger.instance()
         self.ui.pushButton_clear_log.clicked.connect(self.clear_log)
@@ -118,6 +122,9 @@ class MainWindow(QMainWindow):
             scrollbar.setValue(old_position)
 
 
+#endregion================= 日志窗口 =================
+
+#region================= 主界面初始化与路径选择 =================
     def init_ui_state(self):
         #init ui style
         style = STYLE_PATH.read_text(encoding="utf-8")
@@ -138,6 +145,7 @@ class MainWindow(QMainWindow):
         self.init_log_window()
 
         self.ui.menuSet_Param.triggered.connect(self.show_settings)
+        self.ui.comboBox_hand_model.currentTextChanged.connect(self.sync_settings_hand_model)
         self._set_arm_status(self.ui.label_master_status, "disconnected")
         self._set_arm_status(self.ui.label_slave_status, "disconnected")
         #Bind button click command slave arm
@@ -164,6 +172,8 @@ class MainWindow(QMainWindow):
         selected_dir = QFileDialog.getExistingDirectory(self, "选择保存目录", str(initial_dir))
         if selected_dir:
             self.ui.lineEdit_save_file_path.setText(selected_dir)
+
+#endregion================= 主界面初始化与路径选择 =================
 
 #region========================================camera====================================================
     def init_camera_threads(self):
@@ -451,6 +461,7 @@ class MainWindow(QMainWindow):
         
 #endregion========================================camera====================================================
 
+#region================= 状态显示与设置界面 =================
     @staticmethod
     def _set_arm_status(label, state, message=""):
         labels = {
@@ -470,11 +481,30 @@ class MainWindow(QMainWindow):
 
 
     def show_settings(self):
-        self.settings_dialog.refresh_hand_actions(prefer_connected=True)
+        hand_model = self.ui.comboBox_hand_model.currentText().strip()
+        if not self.settings_dialog.refresh_hand_actions(hand_model):
+            self.settings_dialog.hide()
+            return
         self.settings_dialog.show()
         self.settings_dialog.raise_()
         self.settings_dialog.activateWindow()
 
+    def sync_settings_hand_model(self, hand_model):
+        """设置窗口打开时同步主界面选中的灵巧手型号。"""
+        if not self.settings_dialog.isVisible():
+            return
+        previous_model = self.settings_dialog._displayed_hand_model
+        if self.settings_dialog.refresh_hand_actions(hand_model.strip()):
+            return
+        if previous_model and self.ui.comboBox_hand_model.findText(previous_model) >= 0:
+            with QSignalBlocker(self.ui.comboBox_hand_model):
+                self.ui.comboBox_hand_model.setCurrentText(previous_model)
+        else:
+            self.settings_dialog.hide()
+
+#endregion================= 状态显示与设置界面 =================
+
+#region================= 设备线程初始化 =================
     def init_thread(self):
 
         #init slave arm thread
@@ -489,6 +519,9 @@ class MainWindow(QMainWindow):
         # One worker and event loop for each camera view.
         self.init_camera_threads()
 
+#endregion================= 设备线程初始化 =================
+
+#region================= Episode 数据采集 =================
     def init_recording(self):
         synchronizer = DataSynchronizer(
             master_buffer=self.master_capture_buffer,
@@ -587,6 +620,8 @@ class MainWindow(QMainWindow):
 
 
 
+#endregion================= Episode 数据采集 =================
+
 #region===================hand thread=========================
     def init_hand_thread(self):
         self.hand_thread = QThread()
@@ -621,7 +656,7 @@ class MainWindow(QMainWindow):
             Logger.instance().info(msg)
             self.ui.pushButton_connect_hand.setText("Disconnect")
             self.if_hand_connected = True
-            self.settings_dialog.refresh_hand_actions(prefer_connected=True)
+            self.settings_dialog.update_hand_test_button()
             if self.if_start_follow:
                 self.sig_request_sync_hand_trigger.emit()
         else:
