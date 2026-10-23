@@ -1,10 +1,12 @@
 import math
+from time import monotonic_ns
 
 from src.ui.log_stream import Logger
 
 from PySide6.QtCore import QObject, Signal, Slot, QTimer, Qt
 from src.devices.drivers_factory import create_slave_arm
-from src.shared_data.robot_share_data import RobotSharedMemory
+from src.shared_data.robot_share_data import RobotSharedMemory, SlaveState
+from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.controller.teleop_controller import MasterSlaveTeleopCalculator
 class SlaveRobotThread(QObject):
 
@@ -16,11 +18,16 @@ class SlaveRobotThread(QObject):
         sig_tcp_positions = Signal(list)
         sig_follow_result = Signal(bool)
         sig_hand_closed_changed = Signal(bool)
+        sig_movej_result = Signal(bool, str)
 
-        def __init__(self, shared_data: RobotSharedMemory):
+        def __init__(self, shared_data: RobotSharedMemory,
+                     capture_buffer: CaptureRingBuffer[SlaveState],
+                     action_buffer: CaptureRingBuffer[list[float]]):
             super().__init__()
             self.arm = None
             self.shared_data = shared_data
+            self.capture_buffer = capture_buffer
+            self.action_buffer = action_buffer
             self.if_connected = False
             self.if_power_on = False
             self.if_servoj_open = False
@@ -87,10 +94,17 @@ class SlaveRobotThread(QObject):
                 self.timer_read_pos.stop()
 
         def OnTimerTriggeredReadPos(self):
+            if not self.if_connected or self.arm is None:
+                return
             joint_pos = self.arm.Get_joint_positions()
-            tcp_pos = self.arm.Get_tcp_positions()   
+            tcp_pos = self.arm.Get_tcp_positions()
+            sample_timestamp_ns = monotonic_ns()
 
             self.shared_data.slave.update_partial(joints=joint_pos, tcp=tcp_pos)
+            self.capture_buffer.append(
+                SlaveState(joints=joint_pos.copy(), tcp=tcp_pos.copy(), name=self.arm.name),
+                sample_timestamp_ns,
+            )
 
             self.sig_joint_positions.emit(joint_pos)
             self.sig_tcp_positions.emit(tcp_pos)
@@ -101,6 +115,8 @@ class SlaveRobotThread(QObject):
             if self.arm.Connect():
                 self.reset_shared_positions()
                 self.shared_data.slave.update_partial(name=self.arm.name)
+                self.capture_buffer.clear()
+                self.action_buffer.clear()
                 self.if_connected = True
                 self.sig_connect_result.emit(True, "connected successfully")
                 return True
@@ -122,6 +138,8 @@ class SlaveRobotThread(QObject):
                 self.if_power_on = False
                 self.if_servoj_open = False
                 self.servo_target_positions = None
+                self.capture_buffer.clear()
+                self.action_buffer.clear()
                 self.sig_disconnect_result.emit(True, "disconnected successfully")
                 return True
             else:
@@ -172,12 +190,35 @@ class SlaveRobotThread(QObject):
             else:
                 return False
 
-        @Slot()
-        def MoveJ(self, target_positions: list, speed: float, acceleration: float, deceleration: float) -> bool:
-            if self.arm.Move_j(target_positions, speed, acceleration, deceleration):
-                return True
-            else:
+        @Slot(list)
+        def MoveJ(self, target_positions: list, speed: float = 80,
+                  acceleration: float = 80, deceleration: float = 80) -> bool:
+            if not self.if_connected or not self.if_power_on or self.arm is None:
+                self.sig_movej_result.emit(False, "从手未连接或未上电")
                 return False
+            if self.if_running_follow:
+                self.sig_movej_result.emit(False, "请先停止跟随，再执行 RobotHome")
+                return False
+            if (len(target_positions) != self.arm.MAX_JOINT_COUNT
+                    or any(not isinstance(value, (int, float)) or not math.isfinite(value)
+                           for value in target_positions)):
+                self.sig_movej_result.emit(False, "Home Pos 关节角度无效")
+                return False
+            if any(not math.isfinite(value) or value <= 0
+                   for value in (speed, acceleration, deceleration)):
+                self.sig_movej_result.emit(False, "MoveJ 速度和加减速度必须为正数")
+                return False
+            try:
+                if self.if_servoj_open and not self.CloseServoJ():
+                    self.sig_movej_result.emit(False, "关闭 ServoJ 失败，未执行 RobotHome")
+                    return False
+                success = self.arm.Move_j(target_positions, speed, acceleration, deceleration)
+            except Exception as error:
+                self.sig_movej_result.emit(False, f"RobotHome 指令失败: {error}")
+                return False
+            message = "RobotHome 指令已发送" if success else "RobotHome 指令发送失败"
+            self.sig_movej_result.emit(success, message)
+            return success
 
 
         def testservoj(self):
@@ -229,6 +270,7 @@ class SlaveRobotThread(QObject):
                 time_interval_ms = 20
             self.if_running_follow = True
             self.timer_follow.start(time_interval_ms)
+            self.sig_hand_closed_changed.emit(False)
             self.sig_follow_result.emit(True)
 
             Logger.instance().info("主从跟随开启")
@@ -282,4 +324,5 @@ class SlaveRobotThread(QObject):
                 for target, d in zip(self.servo_target_positions, delta)
             ]
             target = list(self.servo_target_positions)
-            self.arm.Set_servoJ_pos(target)
+            if self.arm.Set_servoJ_pos(target):
+                self.action_buffer.append(target.copy(), monotonic_ns())

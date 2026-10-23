@@ -32,3 +32,8 @@ class BaseHand(ABC):
         """Set the speed of the hand."""
         pass
 
+    @abstractmethod
+    def Get_joint_positions(self) -> list:
+        """get joints pos."""
+        pass
+

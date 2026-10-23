@@ -1,7 +1,11 @@
+import json
+import importlib.util
+import math
 import sys
 from pathlib import Path
+from time import monotonic_ns
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QLineEdit
+from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QLineEdit
 from PySide6.QtCore import QMetaObject, Qt, QThread, Signal, Slot, QTimer
 from PySide6.QtGui import QImage, QPixmap
 
@@ -16,7 +20,10 @@ from src.threads.hand_thread import HandThread
 from src.threads.camera_thread import CameraThread
 from serial.tools import list_ports
 from src.shared_data.robot_share_data import RobotSharedMemory
+from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.devices.drivers.Link_hand import LinkHand
+from src.recording.data_synchronizer import DataSynchronizer
+from src.recording.episode_recorder import EpisodeRecorder, FPS as RECORDING_FPS
 
 STYLE_PATH = Path(__file__).resolve().parent / "src" / "res" / "style" / "main_window.qss"
 
@@ -32,6 +39,8 @@ class MainWindow(QMainWindow):
     sig_request_start_follow = Signal(int)
     sig_request_stop_follow = Signal()
     sig_request_sync_hand_trigger = Signal()
+    sig_request_movej = Signal(list)  # target_positions
+
 
     #define signals to request actions in the worker thread master_arm_worker
     sig_request_master_connect = Signal()
@@ -57,23 +66,12 @@ class MainWindow(QMainWindow):
     sig_request_open_servoj = Signal()
     sig_request_close_servoj = Signal()
     sig_request_move_servoj = Signal()
-    sig_request_movej = Signal(list, float, float, float)  # target_positions, speed, acceleration, deceleration
 
     def __init__(self):
         super().__init__()
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        for label in (self.ui.label_master_status, self.ui.label_slave_status):
-            label.setProperty("uiRole", "armStatus")
-        for index in range(1, 4):
-            getattr(self.ui, f"label_camera_status_{index}").setProperty("uiRole", "armStatus")
-            getattr(self.ui, f"label_camera_preview_{index}").setProperty("uiRole", "cameraPreview")
-        style = STYLE_PATH.read_text(encoding="utf-8")
-        self.setStyleSheet(style.replace("__STYLE_DIR__", STYLE_PATH.parent.as_posix()))
-        self.shared_robot_data = RobotSharedMemory()
-        self.settings_dialog = SettingsDialog(self.shared_robot_data, self)
-        self.init_log_window()
 
         self.if_master_connected = False
         self.if_slave_connected = False
@@ -82,13 +80,16 @@ class MainWindow(QMainWindow):
         self.if_side_camera_connected = False
         self.if_front_camera_connected = False
         self.if_hand_camera_connected = False
-
         self.if_start_follow = False
 
+        #init share memory
+        self.shared_robot_data = RobotSharedMemory()
+        
         self.init_ui_state()
         self.init_camera_ui()
 
         self.init_thread()
+        self.init_recording()
 
 
     def init_log_window(self):
@@ -118,12 +119,31 @@ class MainWindow(QMainWindow):
 
 
     def init_ui_state(self):
+        #init ui style
+        style = STYLE_PATH.read_text(encoding="utf-8")
+        self.setStyleSheet(style.replace("__STYLE_DIR__", STYLE_PATH.parent.as_posix()))
+
+        #init recod path
+        self.ui.lineEdit_save_file_path.setText(str(Path(__file__).resolve().parent / "data_recod"))
+        self.ui.pushButton_browse_save_path.clicked.connect(self.choose_save_path)
+
+        #init device statue lable
+        for label in (self.ui.label_master_status, self.ui.label_slave_status):
+            label.setProperty("uiRole", "armStatus")
+        for index in range(1, 4):
+            getattr(self.ui, f"label_camera_status_{index}").setProperty("uiRole", "armStatus")
+            getattr(self.ui, f"label_camera_preview_{index}").setProperty("uiRole", "cameraPreview")
+        self.settings_dialog = SettingsDialog(self.shared_robot_data, self)
+       
+        self.init_log_window()
+
         self.ui.menuSet_Param.triggered.connect(self.show_settings)
         self._set_arm_status(self.ui.label_master_status, "disconnected")
         self._set_arm_status(self.ui.label_slave_status, "disconnected")
         #Bind button click command slave arm
         self.ui.Btn_robot_connect.clicked.connect(self.on_Btn_robot_connect_clicked)
         self.ui.pushButton_robot_PowerOn.clicked.connect(self.on_pushButton_robot_PowerOn_clicked)
+        self.ui.pushButton_slave_home_pos.clicked.connect(self.on_robot_home_clicked)
 
         #master arm click command
         self.ui.pushButton_connect_master_arm.clicked.connect(self.on_pushButton_master_connect_clicked)
@@ -137,11 +157,26 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_connect_hand.clicked.connect(self.on_pushButton_hand_connect_clicked)
   
         #test
+
+    def choose_save_path(self):
+        current_path = Path(self.ui.lineEdit_save_file_path.text().strip()).expanduser()
+        initial_dir = current_path if current_path.is_dir() else current_path.parent
+        selected_dir = QFileDialog.getExistingDirectory(self, "选择保存目录", str(initial_dir))
+        if selected_dir:
+            self.ui.lineEdit_save_file_path.setText(selected_dir)
+
 #region========================================camera====================================================
     def init_camera_threads(self):
+        # 每路相机只缓存最近 5 帧，供后续采集线程按时间戳读取。
+        self.camera_capture_buffers = {
+            "side": CaptureRingBuffer(5),
+            "front": CaptureRingBuffer(5),
+            "hand": CaptureRingBuffer(5),
+        }
+
         # Side camera
         self.side_camera_thread = QThread(self)
-        self.side_camera_worker = CameraThread()
+        self.side_camera_worker = CameraThread(self.camera_capture_buffers["side"])
         self.side_camera_worker.moveToThread(self.side_camera_thread)
         self.side_camera_thread.finished.connect(self.side_camera_worker.deleteLater)
         self.sig_request_side_camera_connect.connect(self.side_camera_worker.ConnectCamera)
@@ -153,7 +188,7 @@ class MainWindow(QMainWindow):
 
         # Front camera
         self.front_camera_thread = QThread(self)
-        self.front_camera_worker = CameraThread()
+        self.front_camera_worker = CameraThread(self.camera_capture_buffers["front"])
         self.front_camera_worker.moveToThread(self.front_camera_thread)
         self.front_camera_thread.finished.connect(self.front_camera_worker.deleteLater)
         self.sig_request_front_camera_connect.connect(self.front_camera_worker.ConnectCamera)
@@ -165,7 +200,7 @@ class MainWindow(QMainWindow):
 
         # Hand camera
         self.hand_camera_thread = QThread(self)
-        self.hand_camera_worker = CameraThread()
+        self.hand_camera_worker = CameraThread(self.camera_capture_buffers["hand"])
         self.hand_camera_worker.moveToThread(self.hand_camera_thread)
         self.hand_camera_thread.finished.connect(self.hand_camera_worker.deleteLater)
         self.sig_request_hand_camera_connect.connect(self.hand_camera_worker.ConnectCamera)
@@ -441,6 +476,7 @@ class MainWindow(QMainWindow):
         self.settings_dialog.activateWindow()
 
     def init_thread(self):
+
         #init slave arm thread
         self.init_slave_arm_thread() 
 
@@ -453,13 +489,112 @@ class MainWindow(QMainWindow):
         # One worker and event loop for each camera view.
         self.init_camera_threads()
 
+    def init_recording(self):
+        synchronizer = DataSynchronizer(
+            master_buffer=self.master_capture_buffer,
+            slave_buffer=self.slave_capture_buffer,
+            hand_buffer=self.hand_capture_buffer,
+            camera_buffers=self.camera_capture_buffers,
+            slave_action_buffer=self.slave_action_buffer,
+            hand_action_buffer=self.hand_action_buffer,
+            fps=RECORDING_FPS,
+        )
+        self.episode_recorder = EpisodeRecorder(synchronizer)
+        self.episode_recorder.capture_finished.connect(self.on_recording_stopped)
+        self.episode_recorder.save_finished.connect(self.on_episode_saved)
+        self.ui.pushButton_start_recod.clicked.connect(self.start_recording)
+        self.ui.pushButton_stop_recod.clicked.connect(self.stop_recording)
+        self.ui.pushButton_save_episode.clicked.connect(self.save_episode)
+        self.ui.pushButton_discard_episode.clicked.connect(self.discard_episode)
+        self.update_recording_buttons()
+
+    def update_recording_buttons(self):
+        state = self.episode_recorder.state
+        self.ui.pushButton_start_recod.setEnabled(state == "idle")
+        self.ui.pushButton_stop_recod.setEnabled(state == "recording")
+        self.ui.pushButton_save_episode.setEnabled(
+            state == "stopped" and self.episode_recorder.frame_count > 0
+            and not self.episode_recorder.capture_error
+        )
+        self.ui.pushButton_discard_episode.setEnabled(state == "stopped")
+
+    def _recording_message(self, message, error=False):
+        (Logger.instance().error if error else Logger.instance().info)(message)
+        self.ui.statusbar.showMessage(message)
+
+    def start_recording(self):
+        if any(importlib.util.find_spec(package) is None for package in ("lerobot", "datasets", "pyarrow", "av")):
+            self._recording_message("缺少 LeRobot 数据集依赖；请安装 requirements.txt", error=True)
+            return
+        if not all((self.if_master_connected, self.if_slave_connected,
+                    self.if_hand_connected, self.if_start_follow,
+                    self.if_side_camera_connected, self.if_front_camera_connected,
+                    self.if_hand_camera_connected)):
+            self._recording_message("请先连接全部设备和三路相机，并启动主从跟随", error=True)
+            return
+        if self.episode_recorder.synchronizer.align_at(monotonic_ns(), 0) is None:
+            self._recording_message("采集数据尚未就绪：检查三路相机及 hand/slave 指令缓存", error=True)
+            return
+        path = self.ui.lineEdit_save_file_path.text().strip()
+        if not path:
+            self._recording_message("请先选择保存目录", error=True)
+            return
+        try:
+            self.episode_recorder.start(Path(path).expanduser().resolve())
+        except Exception as error:
+            self._recording_message(f"启动采集失败：{error}", error=True)
+            return
+        self.update_recording_buttons()
+        self._recording_message(f"开始采集 episode（{RECORDING_FPS} FPS）")
+
+    def stop_recording(self):
+        self.episode_recorder.stop()
+        self.update_recording_buttons()
+        self._recording_message("正在结束采集并写入临时数据...")
+
+    def on_recording_stopped(self, count, error):
+        self.episode_recorder.mark_stopped()
+        self.update_recording_buttons()
+        message = f"采集停止：{count} 帧" + (
+            f"；{error}；临时数据：{self.episode_recorder.staging_dir}"
+            if error else "；可保存或丢弃"
+        )
+        self._recording_message(message, error=bool(error) or count == 0)
+
+    def save_episode(self):
+        try:
+            self.episode_recorder.save()
+        except Exception as error:
+            self._recording_message(str(error), error=True)
+            return
+        self.update_recording_buttons()
+        self._recording_message("正在后台保存 LeRobot v3 episode...")
+
+    def on_episode_saved(self, success, message):
+        self.episode_recorder.mark_saved(success)
+        self.update_recording_buttons()
+        self._recording_message(message, error=not success)
+
+    def discard_episode(self):
+        try:
+            self.episode_recorder.discard()
+        except Exception as error:
+            self._recording_message(str(error), error=True)
+            return
+        self.update_recording_buttons()
+        self._recording_message("已丢弃本条 episode")
+
 
 
 
 #region===================hand thread=========================
     def init_hand_thread(self):
         self.hand_thread = QThread()
-        self.hand_worker = HandThread(self.shared_robot_data)
+        self.hand_capture_buffer = CaptureRingBuffer(100)
+        self.hand_action_buffer = CaptureRingBuffer(100)
+        self.hand_worker = HandThread(
+            self.shared_robot_data, self.hand_capture_buffer, self.hand_action_buffer
+        )
         self.hand_worker.moveToThread(self.hand_thread)
 
         # Connect signals to the worker's slots
@@ -600,7 +735,10 @@ class MainWindow(QMainWindow):
         self.master_arm = create_master_arm("Gello", name="GelloArm", port="/dev/ttyUSB0")
 
         self.master_arm_thread = QThread()
-        self.master_arm_worker = MasterRobotThread(self.master_arm, self.shared_robot_data)
+        self.master_capture_buffer = CaptureRingBuffer(100)
+        self.master_arm_worker = MasterRobotThread(
+            self.master_arm, self.shared_robot_data, self.master_capture_buffer
+        )
         self.master_arm_worker.moveToThread(self.master_arm_thread)
 
         self.sig_request_master_connect.connect(self.master_arm_worker.Connect)
@@ -685,7 +823,11 @@ class MainWindow(QMainWindow):
     def init_slave_arm_thread(self):
         # ================= 核心：moveToThread 组装 =================
         self.slave_arm_thread = QThread()
-        self.slave_arm_worker = SlaveRobotThread(self.shared_robot_data)
+        self.slave_capture_buffer = CaptureRingBuffer(100)
+        self.slave_action_buffer = CaptureRingBuffer(100)
+        self.slave_arm_worker = SlaveRobotThread(
+            self.shared_robot_data, self.slave_capture_buffer, self.slave_action_buffer
+        )
         self.slave_arm_worker.moveToThread(self.slave_arm_thread)
         # ==========================================================
 
@@ -699,6 +841,7 @@ class MainWindow(QMainWindow):
         self.sig_request_start_follow.connect(self.slave_arm_worker.StartFollow)
         self.sig_request_stop_follow.connect(self.slave_arm_worker.StopFollow)
         self.sig_request_sync_hand_trigger.connect(self.slave_arm_worker.SyncHandTriggerState)
+        self.sig_request_movej.connect(self.slave_arm_worker.MoveJ)
 
         # 5. 将 Worker 的结果信号 -> 连接到 MainWindow 的更新回调
         self.slave_arm_worker.sig_connect_result.connect(self.on_connect_result)
@@ -708,12 +851,12 @@ class MainWindow(QMainWindow):
         self.slave_arm_worker.sig_joint_positions.connect(self.on_joint_positions_updated)
         self.slave_arm_worker.sig_tcp_positions.connect(self.on_tcp_positions_updated)
         self.slave_arm_worker.sig_follow_result.connect(self.on_follow_result)
+        self.slave_arm_worker.sig_movej_result.connect(self.on_robot_home_result)
 
         #test
         self.sig_request_open_servoj.connect(self.slave_arm_worker.OpenServoJ)
         self.sig_request_close_servoj.connect(self.slave_arm_worker.CloseServoJ)
         self.sig_request_move_servoj.connect(self.slave_arm_worker.testservoj)
-        self.sig_request_movej.connect(self.slave_arm_worker.MoveJ)
 
         self.slave_arm_thread.start()
 
@@ -748,6 +891,41 @@ class MainWindow(QMainWindow):
         else:
             self.ui.statusbar.showMessage("Enabling...")
             self.sig_request_enable.emit()      
+
+    def on_robot_home_clicked(self):
+        if not self.if_slave_connected or not self.if_slave_power_on or self.if_start_follow:
+            message = "请先连接并上电从手，停止跟随后再执行 RobotHome"
+            Logger.instance().error(message)
+            self.ui.statusbar.showMessage(message)
+            return
+
+        try:
+            with self.settings_dialog.CONFIG_PATH.open(encoding="utf-8") as file:
+                config = json.load(file)
+            slave_name = self.shared_robot_data.slave.read().name
+            values = config[slave_name]["HOME_JOINTS"]
+            joint_count = config[slave_name]["MAX_JOINT_COUNT"]
+            if (not isinstance(values, list) or len(values) != joint_count
+                    or any(type(value) not in (int, float) or not math.isfinite(value)
+                           for value in values)):
+                raise ValueError(f"HOME_JOINTS 需要 {joint_count} 个有限的关节角度")
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            message = f"RobotHome 未执行，先在设置界面保存 Home Pos：{error}"
+            Logger.instance().error(message)
+            self.ui.statusbar.showMessage(message)
+            return
+
+        self.ui.pushButton_slave_home_pos.setEnabled(False)
+        self.ui.statusbar.showMessage("正在发送 RobotHome 指令...")
+        self.sig_request_movej.emit(values)
+
+    def on_robot_home_result(self, success, message):
+        self.ui.pushButton_slave_home_pos.setEnabled(True)
+        self.ui.statusbar.showMessage(message)
+        if success:
+            Logger.instance().info(message)
+        else:
+            Logger.instance().error(message)
 
 
     def on_pushButton_robot_ReadPos_clicked(self):
@@ -824,6 +1002,7 @@ class MainWindow(QMainWindow):
 
     # region ================= 安全退出 =================
     def closeEvent(self, event):
+        self.episode_recorder.wait_for_background_work()
         Logger.instance().info("Closing side camera thread...")
         QMetaObject.invokeMethod(self.side_camera_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
         self.side_camera_thread.quit()

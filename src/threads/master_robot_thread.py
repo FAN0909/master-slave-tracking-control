@@ -1,8 +1,11 @@
-from PySide6.QtCore import QObject, Signal, Slot,QTimer
-from src.devices.base.base_robotArm import BaseRobotArm
-from src.shared_data.robot_share_data import RobotSharedMemory
-
 import math
+from time import monotonic_ns
+
+from PySide6.QtCore import QObject, Signal, Slot, QTimer
+
+from src.devices.base.base_robotArm import BaseRobotArm
+from src.shared_data.capture_ring_buffer import CaptureRingBuffer
+from src.shared_data.robot_share_data import MasterState, RobotSharedMemory
 
 class MasterRobotThread(QObject):
 
@@ -13,10 +16,12 @@ class MasterRobotThread(QObject):
         sig_start_timer = Signal(int)
         sig_stop_timer = Signal()
 
-        def __init__(self, arm: BaseRobotArm, shared_data: RobotSharedMemory):
+        def __init__(self, arm: BaseRobotArm, shared_data: RobotSharedMemory,
+                     capture_buffer: CaptureRingBuffer[MasterState]):
             super().__init__()
             self.arm = arm
             self.shared_data = shared_data
+            self.capture_buffer = capture_buffer
             self.reset_shared_positions()
             self.if_connected = False
             self.timer_read_pos = QTimer(self)
@@ -45,6 +50,7 @@ class MasterRobotThread(QObject):
             if self.arm.Connect():
                 self.reset_shared_positions()
                 self.shared_data.master.update_partial(name=self.arm.name)
+                self.capture_buffer.clear()
                 self.if_connected = True
                 self.sig_connect_result.emit(True, "connected successfully")
                 return True
@@ -57,6 +63,7 @@ class MasterRobotThread(QObject):
             self.StopTimer()
             if self.arm.Disconnect():
                 self.if_connected = False
+                self.capture_buffer.clear()
                 self.sig_disconnect_result.emit(True, "disconnected successfully")
                 return True
             else:
@@ -72,6 +79,8 @@ class MasterRobotThread(QObject):
 
 
         def OnTimerTriggeredReadPos(self):
+            if not self.if_connected:
+                return
             # 获取主手关节位置（弧度）
             joint_pos = self.arm.Get_joint_positions()
 
@@ -80,7 +89,14 @@ class MasterRobotThread(QObject):
                 math.degrees(pos)
                 for pos in joint_pos
             ]
-            self.shared_data.master.update_partial(joints=joint_pos_deg, tcp=[0.0] * self.arm.TCP_DIM)
+            sample_timestamp_ns = monotonic_ns()
+            # Gello 不提供 TCP 位姿，这里沿用共享状态中的零占位。
+            tcp_pos = [0.0] * self.arm.TCP_DIM
+            self.shared_data.master.update_partial(joints=joint_pos_deg, tcp=tcp_pos)
+            self.capture_buffer.append(
+                MasterState(joints=joint_pos_deg.copy(), tcp=tcp_pos.copy(), name=self.arm.name),
+                sample_timestamp_ns,
+            )
 
             # 发送角度数据
             self.sig_joint_positions.emit(joint_pos_deg)

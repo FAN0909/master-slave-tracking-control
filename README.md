@@ -1,10 +1,10 @@
-# Master-Slave Tracking Control
+# 主从遥操作与数据采集
 
-The current setup is for Linux x86_64 with glibc 2.34 or newer and Python 3.12 (tested with 3.12.13). The PySide6 wheel requires glibc 2.34 or newer, and the bundled NRC extension links to Python 3.12. The `.venv` directory is local to each machine and is not committed to Git.
+本项目面向 Linux x86_64、glibc 2.34 及以上版本和 Python 3.12（已在 Python 3.12.13 上测试）。PySide6 需要 glibc 2.34 或更新版本；项目自带的 NRC 扩展依赖 Python 3.12。虚拟环境 `.venv` 仅供本机使用，不会提交到 Git。
 
-Install Python 3.12 and its `venv` module first. Check that `python3.12 --version` works before following the commands below.
+## 安装与启动
 
-After cloning the repository, run these commands from the project root:
+先安装 Python 3.12 及其 `venv` 模块，并确认 `python3.12 --version` 可以正常运行。克隆项目后，在项目根目录执行：
 
 ```bash
 python3.12 -m venv .venv
@@ -12,8 +12,56 @@ python3.12 -m venv .venv
 ./run.sh
 ```
 
-Run `./run.sh` on subsequent launches. It uses the Python and Qt UI compiler installed in `.venv`.
+以后启动时直接运行 `./run.sh`。脚本会使用 `.venv` 中的 Python 和 Qt UI 编译工具。
 
-The bundled NRC extension, `vendor/nrc/_nrc_host.so`, also requires the system library `libpython3.12.so.1.0`. A Python virtual environment does not supply this library. On Linux, run `ldd vendor/nrc/_nrc_host.so` and check for `not found` before starting the app. The bundled extension is built for Linux x86_64; other systems need a compatible build from the NRC SDK.
+项目自带的 NRC 扩展 `vendor/nrc/_nrc_host.so` 还需要系统提供 `libpython3.12.so.1.0`。虚拟环境不会提供这个系统库。启动前可以运行 `ldd vendor/nrc/_nrc_host.so`，检查输出中是否有 `not found`。该扩展面向 Linux x86_64；其他系统需要使用 NRC SDK 提供的兼容版本。
 
-The RealSense camera also needs its hardware and system driver to be available on the machine running the application. If setup fails on another computer, record its OS and architecture, `python3.12 --version`, the complete failing command and error output, and the output of `ldd vendor/nrc/_nrc_host.so`.
+RealSense 相机还需要本机具备相应硬件和系统驱动。如果在另一台电脑上启动失败，请记录其操作系统与架构、`python3.12 --version`、完整的失败命令与报错，以及 `ldd vendor/nrc/_nrc_host.so` 的输出。
+
+## 采集 LeRobot v3 episode
+
+LeRobot v3 所需依赖已包含在 `requirements.txt` 中。PyTorch 使用 PyTorch 软件包索引提供的 CPU 版本。
+
+先连接主手、从手、LinkerO6 灵巧手和三路相机，再启动主从跟随。界面中选择的保存路径是数据集的上级目录；保存的 episode 会追加到其中的 `lerobot_v3/` 数据集。
+
+- **StartRecod**：以 20 FPS 开始采集一条 episode，并暂存同步数据。
+- **StopRecod**：停止本条 episode 的采集。
+- **Save episode**：在后台将本条 episode 写入 LeRobot v3 数据集。
+- **Discard episode**：丢弃本条 episode 的暂存数据。
+
+保存完成前请保持程序运行。目前数据集使用固定任务描述 `Teleoperated manipulation`。采集中断或失败时，暂存目录 `.episode_*` 会保留在所选保存路径下，供检查原始帧。录制过程要求连续的 20 FPS 时间点；缺帧的 episode 不能作为正常固定帧率 episode 保存。
+
+---
+
+# Master-Slave Teleoperation and Data Collection
+
+This project targets Linux x86_64 with glibc 2.34 or newer and Python 3.12 (tested with Python 3.12.13). PySide6 requires glibc 2.34 or newer, and the bundled NRC extension depends on Python 3.12. The `.venv` virtual environment is local to each machine and is not committed to Git.
+
+## Installation and startup
+
+Install Python 3.12 and its `venv` module first. Confirm that `python3.12 --version` works. After cloning the repository, run these commands from the project root:
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+./run.sh
+```
+
+For later launches, run `./run.sh`. The script uses the Python interpreter and Qt UI compiler installed in `.venv`.
+
+The bundled NRC extension, `vendor/nrc/_nrc_host.so`, also needs the system library `libpython3.12.so.1.0`. A virtual environment does not supply this library. Before starting the app, run `ldd vendor/nrc/_nrc_host.so` and check for `not found`. The extension targets Linux x86_64; other systems need a compatible build from the NRC SDK.
+
+The RealSense camera also needs its hardware and system driver on the machine running the app. If startup fails on another computer, record its OS and architecture, `python3.12 --version`, the complete failing command and error output, and the output of `ldd vendor/nrc/_nrc_host.so`.
+
+## Record LeRobot v3 episodes
+
+LeRobot v3 dependencies are included in `requirements.txt`. PyTorch uses CPU wheels from the PyTorch package index.
+
+Connect the master arm, slave arm, LinkerO6 hand, and all three cameras, then start teleoperation. The selected Save path is the parent directory of the dataset. Saved episodes are appended to `lerobot_v3/` inside it.
+
+- **StartRecod**: Start one episode at 20 FPS and stage synchronized data.
+- **StopRecod**: Stop capturing the current episode.
+- **Save episode**: Write the episode to the LeRobot v3 dataset in the background.
+- **Discard episode**: Delete the staged data for the current episode.
+
+Keep the app open until saving finishes. The dataset currently uses the fixed task description `Teleoperated manipulation`. An interrupted or failed capture leaves its `.episode_*` staging directory under the selected Save path for inspection. Recording requires consecutive 20 FPS ticks; an episode with missing ticks cannot be saved as a regular fixed-FPS episode.

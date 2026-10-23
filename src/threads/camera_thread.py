@@ -1,6 +1,8 @@
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
+from numpy import ndarray
 
 from src.devices.drivers_factory import create_camera
+from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.ui.log_stream import Logger
 
 
@@ -11,15 +13,16 @@ class CameraThread(QObject):
     sig_disconnect_result = Signal(bool, str)
     sig_color_frame = Signal(object)  # BGR8 numpy.ndarray，形状为 (高, 宽, 3)
 
-    def __init__(self):
+    def __init__(self, capture_buffer: CaptureRingBuffer[ndarray]):
         super().__init__()
         self.camera = None
+        self.capture_buffer = capture_buffer
         self.if_connected = False
         self.timer_read_frame = QTimer(self)
         self.timer_read_frame.timeout.connect(self.OnTimerTriggeredReadFrame)
 
     @Slot(str, str, int)
-    def ConnectCamera(self, camera_type: str, serial_number: str, interval_ms: int) -> bool:
+    def ConnectCamera(self, camera_type: str, serial_number: str, interval_ms: int =20) -> bool:
         if self.if_connected:
             self.sig_connect_result.emit(False, "Disconnect this camera before connecting another device")
             return False
@@ -39,6 +42,7 @@ class CameraThread(QObject):
 
         self.camera = camera
         self.if_connected = True
+        self.capture_buffer.clear()
         self.StartTimer(interval_ms)
         message = f"[{camera.name}] connected successfully"
         Logger.instance().info(message)
@@ -67,6 +71,7 @@ class CameraThread(QObject):
         name = self.camera.name
         self.camera = None
         self.if_connected = False
+        self.capture_buffer.clear()
         message = f"[{name}] disconnected successfully"
         Logger.instance().info(message)
         self.sig_disconnect_result.emit(True, message)
@@ -102,4 +107,5 @@ class CameraThread(QObject):
             Logger.instance().error(f"[{self.camera.name}] get color frame failed: {error}")
             return
         if frame is not None:
+            self.capture_buffer.append(frame)
             self.sig_color_frame.emit(frame)
