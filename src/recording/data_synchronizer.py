@@ -119,6 +119,34 @@ class DataSynchronizer(QObject):
             hand_action=hand_action,
         )
 
+    def _missing_source_details(self, timestamp_ns: int) -> str:
+        """说明目标时刻哪些数据源没有可用样本，以及最近样本的年龄。"""
+        sources = (
+            ("master", self.master_buffer, self.max_robot_age_ns),
+            ("slave", self.slave_buffer, self.max_robot_age_ns),
+            ("hand", self.hand_buffer, self.max_robot_age_ns),
+            ("side_camera", self.camera_buffers["side"], self.max_camera_age_ns),
+            ("front_camera", self.camera_buffers["front"], self.max_camera_age_ns),
+            ("hand_camera", self.camera_buffers["hand"], self.max_camera_age_ns),
+            ("slave_action", self.slave_action_buffer, self.max_slave_action_age_ns),
+            ("hand_action", self.hand_action_buffer, None),
+        )
+        details = []
+        for name, buffer, max_age_ns in sources:
+            if buffer.latest_before_or_at(timestamp_ns, max_age_ns) is not None:
+                continue
+            previous = buffer.latest_before_or_at(timestamp_ns)
+            if previous is not None and max_age_ns is not None:
+                age_ms = (timestamp_ns - previous.timestamp_ns) / 1_000_000
+                details.append(f"{name} 过期 {age_ms:.1f} ms（上限 {max_age_ns / 1_000_000:.0f} ms）")
+            elif previous is not None:
+                details.append(f"{name} 采样时尚未到达")
+            elif buffer.latest() is None:
+                details.append(f"{name} 无样本")
+            else:
+                details.append(f"{name} 目标时刻前无样本")
+        return "；".join(details) or "采样时数据尚未到达"
+
     @Slot()
     def start(self) -> bool:
         """从新的固定帧率时间轴开始；先清空上一段的输出队列。"""
@@ -141,18 +169,26 @@ class DataSynchronizer(QObject):
 
     @Slot()
     def collect_once(self) -> None:
-        """处理当前时间轴上的一个时刻；定时器延迟时跳过错过的时刻。"""
+        """处理当前时间轴上的一个时刻；缺帧时立即停止并报告原因。"""
         if self._start_timestamp_ns is None or not self.timer.isActive():
             return
         tick_index = (monotonic_ns() - self._start_timestamp_ns) // self.period_ns
         if tick_index <= self._last_tick_index:
             return
-        self.skipped_count += tick_index - self._last_tick_index - 1
+        missed_ticks = tick_index - self._last_tick_index - 1
+        self.skipped_count += missed_ticks
         self._last_tick_index = tick_index
+        if missed_ticks:
+            self.stop()
+            self.sig_error.emit(f"同步定时器延迟，跳过 {missed_ticks} 帧（当前 tick {tick_index}）")
+            return
         target_timestamp_ns = self._start_timestamp_ns + tick_index * self.period_ns
         frame = self.align_at(target_timestamp_ns, tick_index)
         if frame is None:
             self.skipped_count += 1
+            details = self._missing_source_details(target_timestamp_ns)
+            self.stop()
+            self.sig_error.emit(f"同步 tick {tick_index} 缺少可用数据：{details}")
             return
         try:
             self.output_queue.put_nowait(frame)
