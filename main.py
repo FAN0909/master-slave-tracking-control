@@ -1,7 +1,9 @@
 import json
+import importlib.util
 import math
 import sys
 from pathlib import Path
+from time import monotonic_ns
 
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QLineEdit
 from PySide6.QtCore import QMetaObject, Qt, QThread, Signal, Slot, QTimer
@@ -20,6 +22,8 @@ from serial.tools import list_ports
 from src.shared_data.robot_share_data import RobotSharedMemory
 from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.devices.drivers.Link_hand import LinkHand
+from src.recording.data_synchronizer import DataSynchronizer
+from src.recording.episode_recorder import EpisodeRecorder, FPS as RECORDING_FPS
 
 STYLE_PATH = Path(__file__).resolve().parent / "src" / "res" / "style" / "main_window.qss"
 
@@ -85,6 +89,7 @@ class MainWindow(QMainWindow):
         self.init_camera_ui()
 
         self.init_thread()
+        self.init_recording()
 
 
     def init_log_window(self):
@@ -483,6 +488,101 @@ class MainWindow(QMainWindow):
 
         # One worker and event loop for each camera view.
         self.init_camera_threads()
+
+    def init_recording(self):
+        synchronizer = DataSynchronizer(
+            master_buffer=self.master_capture_buffer,
+            slave_buffer=self.slave_capture_buffer,
+            hand_buffer=self.hand_capture_buffer,
+            camera_buffers=self.camera_capture_buffers,
+            slave_action_buffer=self.slave_action_buffer,
+            hand_action_buffer=self.hand_action_buffer,
+            fps=RECORDING_FPS,
+        )
+        self.episode_recorder = EpisodeRecorder(synchronizer)
+        self.episode_recorder.capture_finished.connect(self.on_recording_stopped)
+        self.episode_recorder.save_finished.connect(self.on_episode_saved)
+        self.ui.pushButton_start_recod.clicked.connect(self.start_recording)
+        self.ui.pushButton_stop_recod.clicked.connect(self.stop_recording)
+        self.ui.pushButton_save_episode.clicked.connect(self.save_episode)
+        self.ui.pushButton_discard_episode.clicked.connect(self.discard_episode)
+        self.update_recording_buttons()
+
+    def update_recording_buttons(self):
+        state = self.episode_recorder.state
+        self.ui.pushButton_start_recod.setEnabled(state == "idle")
+        self.ui.pushButton_stop_recod.setEnabled(state == "recording")
+        self.ui.pushButton_save_episode.setEnabled(
+            state == "stopped" and self.episode_recorder.frame_count > 0
+            and not self.episode_recorder.capture_error
+        )
+        self.ui.pushButton_discard_episode.setEnabled(state == "stopped")
+
+    def _recording_message(self, message, error=False):
+        (Logger.instance().error if error else Logger.instance().info)(message)
+        self.ui.statusbar.showMessage(message)
+
+    def start_recording(self):
+        if any(importlib.util.find_spec(package) is None for package in ("lerobot", "datasets", "pyarrow", "av")):
+            self._recording_message("缺少 LeRobot 数据集依赖；请安装 requirements.txt", error=True)
+            return
+        if not all((self.if_master_connected, self.if_slave_connected,
+                    self.if_hand_connected, self.if_start_follow,
+                    self.if_side_camera_connected, self.if_front_camera_connected,
+                    self.if_hand_camera_connected)):
+            self._recording_message("请先连接全部设备和三路相机，并启动主从跟随", error=True)
+            return
+        if self.episode_recorder.synchronizer.align_at(monotonic_ns(), 0) is None:
+            self._recording_message("采集数据尚未就绪：检查三路相机及 hand/slave 指令缓存", error=True)
+            return
+        path = self.ui.lineEdit_save_file_path.text().strip()
+        if not path:
+            self._recording_message("请先选择保存目录", error=True)
+            return
+        try:
+            self.episode_recorder.start(Path(path).expanduser().resolve())
+        except Exception as error:
+            self._recording_message(f"启动采集失败：{error}", error=True)
+            return
+        self.update_recording_buttons()
+        self._recording_message(f"开始采集 episode（{RECORDING_FPS} FPS）")
+
+    def stop_recording(self):
+        self.episode_recorder.stop()
+        self.update_recording_buttons()
+        self._recording_message("正在结束采集并写入临时数据...")
+
+    def on_recording_stopped(self, count, error):
+        self.episode_recorder.mark_stopped()
+        self.update_recording_buttons()
+        message = f"采集停止：{count} 帧" + (
+            f"；{error}；临时数据：{self.episode_recorder.staging_dir}"
+            if error else "；可保存或丢弃"
+        )
+        self._recording_message(message, error=bool(error) or count == 0)
+
+    def save_episode(self):
+        try:
+            self.episode_recorder.save()
+        except Exception as error:
+            self._recording_message(str(error), error=True)
+            return
+        self.update_recording_buttons()
+        self._recording_message("正在后台保存 LeRobot v3 episode...")
+
+    def on_episode_saved(self, success, message):
+        self.episode_recorder.mark_saved(success)
+        self.update_recording_buttons()
+        self._recording_message(message, error=not success)
+
+    def discard_episode(self):
+        try:
+            self.episode_recorder.discard()
+        except Exception as error:
+            self._recording_message(str(error), error=True)
+            return
+        self.update_recording_buttons()
+        self._recording_message("已丢弃本条 episode")
 
 
 
@@ -902,6 +1002,7 @@ class MainWindow(QMainWindow):
 
     # region ================= 安全退出 =================
     def closeEvent(self, event):
+        self.episode_recorder.wait_for_background_work()
         Logger.instance().info("Closing side camera thread...")
         QMetaObject.invokeMethod(self.side_camera_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
         self.side_camera_thread.quit()

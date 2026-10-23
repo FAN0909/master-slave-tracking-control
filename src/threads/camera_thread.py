@@ -22,7 +22,7 @@ class CameraThread(QObject):
         self.timer_read_frame.timeout.connect(self.OnTimerTriggeredReadFrame)
 
     @Slot(str, str, int)
-    def ConnectCamera(self, camera_type: str, serial_number: str, interval_ms: int) -> bool:
+    def ConnectCamera(self, camera_type: str, serial_number: str, interval_ms: int =20) -> bool:
         if self.if_connected:
             self.sig_connect_result.emit(False, "Disconnect this camera before connecting another device")
             return False

@@ -270,6 +270,7 @@ class SlaveRobotThread(QObject):
                 time_interval_ms = 20
             self.if_running_follow = True
             self.timer_follow.start(time_interval_ms)
+            self.sig_hand_closed_changed.emit(False)
             self.sig_follow_result.emit(True)
 
             Logger.instance().info("主从跟随开启")
