@@ -3,8 +3,8 @@ import math
 import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QLineEdit
-from PySide6.QtCore import QMetaObject, QSignalBlocker, Qt, QThread, Signal, Slot, QTimer
+from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QMainWindow, QLineEdit
+from PySide6.QtCore import Q_ARG, QMetaObject, QSignalBlocker, Qt, QThread, Signal, Slot, QTimer
 from PySide6.QtGui import QImage, QPixmap
 
 from src.ui.main_window import Ui_MainWindow
@@ -20,6 +20,8 @@ from serial.tools import list_ports
 from src.shared_data.robot_share_data import RobotSharedMemory
 from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.devices.drivers.Link_hand import LinkHand
+from src.recording.data_synchronizer import DataSynchronizer, FPS as RECORDING_FPS
+from src.recording.episode_recorder import EpisodeRecorder
 
 STYLE_PATH = Path(__file__).resolve().parent / "src" / "res" / "style" / "main_window.qss"
 
@@ -86,6 +88,7 @@ class MainWindow(QMainWindow):
         self.init_camera_ui()
 
         self.init_thread()
+        self.init_recording()
 
 
 #endregion================= 主窗口初始化 =================
@@ -516,6 +519,131 @@ class MainWindow(QMainWindow):
 
 #endregion================= 设备线程初始化 =================
 
+#region================= LeRobot episode 采集 =================
+    def init_recording(self):
+        synchronizer = DataSynchronizer(
+            self.shared_robot_data, self.master_capture_buffer, self.slave_capture_buffer,
+            self.hand_capture_buffer, self.camera_capture_buffers,
+            self.slave_action_buffer, self.hand_action_buffer,
+            health_check=self.recording_device_error,
+        )
+        self.episode_recorder = EpisodeRecorder(synchronizer, self)
+        self._recording_task = ""
+        self._close_after_recording = False
+        self._closing_devices = False
+        self._hand_recording_locked = False
+        self.episode_recorder.state_changed.connect(self.update_recording_buttons)
+        self.episode_recorder.capture_finished.connect(self.on_recording_stopped)
+        self.episode_recorder.save_finished.connect(self.on_episode_saved)
+        self.episode_recorder.progress.connect(self.on_recording_progress)
+        self.ui.pushButton_start_recod.clicked.connect(self.start_recording)
+        self.ui.pushButton_stop_recod.clicked.connect(self.stop_recording)
+        self.ui.pushButton_save_episode.clicked.connect(self.save_episode)
+        self.ui.pushButton_discard_episode.clicked.connect(self.discard_episode)
+        self.update_recording_buttons()
+
+    def recording_device_error(self):
+        """采样线程仅读取 worker 的连接标志，不访问 Qt 界面。"""
+        if not all((self.master_arm_worker.if_connected, self.slave_arm_worker.if_connected,
+                    self.hand_worker.if_connected, self.side_camera_worker.if_connected,
+                    self.front_camera_worker.if_connected, self.hand_camera_worker.if_connected)):
+            return "请先连接主从手、灵巧手和三路相机；采集期间设备必须保持连接"
+        if not self.slave_arm_worker.if_running_follow or not self.slave_arm_worker.if_power_on:
+            return "采集需要保持从手上电并启动主从跟随"
+        return ""
+
+    def _lock_recording_controls(self, locked):
+        if self._hand_recording_locked != locked:
+            QMetaObject.invokeMethod(self.hand_worker, "SetRecordingLocked",
+                                     Qt.ConnectionType.BlockingQueuedConnection, Q_ARG(bool, locked))
+            self._hand_recording_locked = locked
+        self.settings_dialog.setEnabled(not locked)
+
+    def update_recording_buttons(self, _state=None):
+        recorder = self.episode_recorder
+        state = recorder.state
+        self.ui.pushButton_start_recod.setEnabled(state == "idle")
+        self.ui.pushButton_stop_recod.setEnabled(state == "recording")
+        self.ui.pushButton_save_episode.setEnabled(
+            state == "stopped" and recorder.frame_count > 0 and not recorder.capture_error)
+        self.ui.pushButton_discard_episode.setEnabled(state == "stopped")
+        busy = state in ("recording", "stopping", "saving", "discarding")
+        self.ui.lineEdit_save_file_path.setReadOnly(busy)
+        self.ui.pushButton_browse_save_path.setEnabled(not busy)
+        self._lock_recording_controls(state in ("recording", "stopping"))
+        if self._close_after_recording and not busy:
+            self._close_after_recording = False
+            QTimer.singleShot(0, self.close)
+
+    def recording_message(self, message, error=False):
+        (Logger.instance().error if error else Logger.instance().info)(message)
+        self.ui.statusbar.showMessage(message)
+
+    def start_recording(self):
+        if self.episode_recorder.state != "idle":
+            return
+        error = self.recording_device_error()
+        if error:
+            self.recording_message(error, True)
+            return
+        task, accepted = QInputDialog.getText(
+            self, "采集任务", "本条 episode 的任务描述（例如：将红色方块放入盒子）：",
+            text=self._recording_task)
+        if not accepted:
+            return
+        try:
+            path = self.ui.lineEdit_save_file_path.text().strip()
+            if not path:
+                raise ValueError("请先选择保存目录")
+            # 阻止设置页测试指令；BlockingQueuedConnection 同时排空此前已排队的手部操作。
+            self._lock_recording_controls(True)
+            config_root = Path(__file__).resolve().parent / "config"
+            metadata = {name: json.loads((config_root / name).read_text(encoding="utf-8"))
+                        for name in ("master_arm.json", "slave_arm.json", "hand_control.json")}
+            self.episode_recorder.start(Path(path), task, metadata)
+            self._recording_task = task.strip()
+        except Exception as error:
+            self._lock_recording_controls(False)
+            self.recording_message(f"启动采集失败：{error}", True)
+            return
+        self.recording_message(f"开始采集 episode（{RECORDING_FPS} FPS）：{self._recording_task}")
+
+    def stop_recording(self):
+        self.episode_recorder.stop()
+        self.recording_message("正在停止采集并等待暂存写入完成…")
+
+    def on_recording_progress(self, count):
+        if self.episode_recorder.state == "recording":
+            self.ui.statusbar.showMessage(f"正在采集：{count} 帧（{RECORDING_FPS} FPS）")
+
+    def on_recording_stopped(self, count, error):
+        self.update_recording_buttons()
+        self.recording_message(
+            f"采集停止：{count} 帧；" + (f"{error}；暂存数据：{self.episode_recorder.staging_dir}"
+                                       if error else "可保存或丢弃 episode"), bool(error))
+
+    def save_episode(self):
+        try:
+            path = self.ui.lineEdit_save_file_path.text().strip()
+            if not path:
+                raise ValueError("保存目录不能为空")
+            self.episode_recorder.save(Path(path).expanduser().resolve())
+            self.recording_message("正在后台保存 LeRobot v3 episode…")
+        except Exception as error:
+            self.recording_message(str(error), True)
+
+    def on_episode_saved(self, success, message):
+        self.update_recording_buttons()
+        self.recording_message(message, not success)
+
+    def discard_episode(self):
+        try:
+            self.episode_recorder.discard()
+            self.recording_message("正在丢弃本条 episode…")
+        except Exception as error:
+            self.recording_message(f"丢弃失败：{error}", True)
+
+#endregion================= LeRobot episode 采集 =================
 
 
 #region===================hand thread=========================
@@ -933,6 +1061,20 @@ class MainWindow(QMainWindow):
 
     # region ================= 安全退出 =================
     def closeEvent(self, event):
+        if self._closing_devices:
+            event.accept()
+            return
+        recorder = self.episode_recorder
+        if recorder.state in ("recording", "stopping", "saving", "discarding"):
+            self._close_after_recording = True
+            recorder.stop()
+            self.recording_message("正在等待采集或保存结束后关闭窗口…")
+            event.ignore()
+            return
+        recorder.shutdown()
+        self._closing_devices = True
+        if recorder.staging_dir is not None:
+            Logger.instance().info(f"未保存的 episode 已保留：{recorder.staging_dir}")
         Logger.instance().info("Closing side camera thread...")
         QMetaObject.invokeMethod(self.side_camera_worker, "Shutdown", Qt.ConnectionType.BlockingQueuedConnection)
         self.side_camera_thread.quit()

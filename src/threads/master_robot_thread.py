@@ -1,11 +1,12 @@
 import math
-from time import monotonic_ns
 
 from PySide6.QtCore import QObject, Signal, Slot, QTimer
 
-from src.devices.base.base_robotArm import BaseRobotArm
+from src.devices.base.base_masterArm import BaseMasterArm
+from src.shared_data.device_feedback import FeedbackStatus
 from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.shared_data.robot_share_data import MasterState, RobotSharedMemory
+from src.ui.log_stream import Logger
 
 class MasterRobotThread(QObject):
 
@@ -16,12 +17,13 @@ class MasterRobotThread(QObject):
         sig_start_timer = Signal(int)
         sig_stop_timer = Signal()
 
-        def __init__(self, arm: BaseRobotArm, shared_data: RobotSharedMemory,
+        def __init__(self, arm: BaseMasterArm, shared_data: RobotSharedMemory,
                      capture_buffer: CaptureRingBuffer[MasterState]):
             super().__init__()
             self.arm = arm
             self.shared_data = shared_data
             self.capture_buffer = capture_buffer
+            self._last_capture_sequence = 0
             self.reset_shared_positions()
             self.if_connected = False
             self.timer_read_pos = QTimer(self)
@@ -29,9 +31,9 @@ class MasterRobotThread(QObject):
 
         def reset_shared_positions(self):
             self.shared_data.master.update_partial(
-                joints=[0.0] * self.arm.MAX_JOINT_COUNT,
-                tcp=[0.0] * self.arm.TCP_DIM,
+                joints=[], tcp=[], feedback=FeedbackStatus(),
             )
+            self._last_capture_sequence = 0
 
         @Slot(int)
         def StartTimer(self, interval_ms: int =20):
@@ -64,6 +66,7 @@ class MasterRobotThread(QObject):
             if self.arm.Disconnect():
                 self.if_connected = False
                 self.capture_buffer.clear()
+                self.reset_shared_positions()
                 self.sig_disconnect_result.emit(True, "disconnected successfully")
                 return True
             else:
@@ -81,22 +84,26 @@ class MasterRobotThread(QObject):
         def OnTimerTriggeredReadPos(self):
             if not self.if_connected:
                 return
-            # 获取主手关节位置（弧度）
-            joint_pos = self.arm.Get_joint_positions()
-
-            # 弧度转换为角度
-            joint_pos_deg = [
-                math.degrees(pos)
-                for pos in joint_pos
-            ]
-            sample_timestamp_ns = monotonic_ns()
-            # Gello 不提供 TCP 位姿，这里沿用共享状态中的零占位。
-            tcp_pos = [0.0] * self.arm.TCP_DIM
-            self.shared_data.master.update_partial(joints=joint_pos_deg, tcp=tcp_pos)
+            try:
+                sample = self.arm.Read_joint_positions()
+            except Exception as error:
+                previous = self.shared_data.master.read().feedback
+                if previous.error != str(error) or previous.valid:
+                    Logger.instance().error(f"[{self.arm.name}] {error}")
+                self.shared_data.master.update_partial(
+                    joints=[], tcp=[], feedback=previous.failure(error),
+                )
+                return
+            joint_pos_deg = [math.degrees(pos) for pos in sample.values]
+            # Gello 不提供 TCP；空列表明确表示缺失，不伪造零位姿。
+            state = MasterState(joint_pos_deg, [], self.arm.name, FeedbackStatus.success(sample))
+            self.shared_data.master.write(state)
+            if sample.sequence == self._last_capture_sequence:
+                return
             self.capture_buffer.append(
-                MasterState(joints=joint_pos_deg.copy(), tcp=tcp_pos.copy(), name=self.arm.name),
-                sample_timestamp_ns,
+                state.snapshot(), sample.timestamp_ns,
             )
+            self._last_capture_sequence = sample.sequence
 
             # 发送角度数据
             self.sig_joint_positions.emit(joint_pos_deg)

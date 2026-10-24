@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.ui.log_stream import Logger
 from src.devices.base.base_robotArm import BaseRobotArm
+from src.shared_data.device_feedback import DeviceReadError, FeedbackTracker, validate_positions
 
 # NRC 的原生扩展依赖系统库；连接 NRC 时再加载，避免它阻断整个界面启动。
 nrc_interface = None
@@ -33,6 +34,8 @@ class NrcArm(BaseRobotArm):
         self.is_connected = False
         self.is_enabled = False
         self.last_error = ""
+        self._joint_feedback = FeedbackTracker(self.MAX_JOINT_COUNT)
+        self._tcp_feedback = FeedbackTracker(self.TCP_DIM)
 
     def _load_config(self, path):
         """创建驱动和连接前读取配置，跟随循环不访问磁盘。"""
@@ -66,6 +69,8 @@ class NrcArm(BaseRobotArm):
                 from vendor.nrc import nrc_interface as sdk
                 nrc_interface = sdk
             self._load_config(self.config_path)
+            self._joint_feedback = FeedbackTracker(self.MAX_JOINT_COUNT)
+            self._tcp_feedback = FeedbackTracker(self.TCP_DIM)
             Logger.instance().info(f"[{self.name}] connecting to {self.ip_address}:{self.command_port} and {self.servo_port}...")
             self.command_fd = nrc_interface.connect_robot(self.ip_address, str(self.command_port))
             if self.command_fd == -1:
@@ -123,47 +128,45 @@ class NrcArm(BaseRobotArm):
             self.is_enabled = True
         return not self.is_enabled
 
-    def Get_joint_positions(self) -> list:
+    def _read_positions(self, coord, tracker, count):
+        if not self.is_connected or nrc_interface is None:
+            raise DeviceReadError("NRC 未连接")
         try:
-                output = nrc_interface.VectorDouble()
-                output.resize(self.MAX_JOINT_COUNT)
+            output = nrc_interface.VectorDouble()
+            # NRC 的 TCP 返回区按机械臂关节数分配，尾部不是 TCP 分量。
+            output.resize(max(self.MAX_JOINT_COUNT, count))
+            result = nrc_interface.get_current_position(self.command_fd, coord, output)
+            if result != 0:
+                raise DeviceReadError(f"NRC 位置读取失败：{result}")
+            values = list(output)
+            if coord == self.TCP_COORD and len(values) == max(self.MAX_JOINT_COUNT, count):
+                values = values[:count]
+            return tracker.publish(values)
+        except Exception as error:
+            tracker.invalidate(error)
+            raise DeviceReadError(str(error)) from error
 
-                result = nrc_interface.get_current_position(
-                    self.command_fd,
-                    self.JOINT_COORD,
-                    output
-                )
+    def Read_joint_positions(self):
+        """返回本次成功响应的位置、单调时钟时间和序号；失败抛出异常。"""
+        return self._read_positions(self.JOINT_COORD, self._joint_feedback, self.MAX_JOINT_COUNT)
 
-                if result != 0:
-                    Logger.instance().error(f"[{self.name}] get_current_position failed: {result}")
-                    return [0.0] * self.MAX_JOINT_COUNT
+    def Read_tcp_positions(self):
+        return self._read_positions(self.TCP_COORD, self._tcp_feedback, self.TCP_DIM)
 
-                return [float(value) for value in output]
-
-        except Exception as e:
-                Logger.instance().error(f"[{self.name}] get_current_position error: {e}")
-                return [0.0] * self.MAX_JOINT_COUNT
+    def Get_joint_positions(self) -> list:
+        """兼容列表接口；读取失败返回空列表。"""
+        try:
+            return list(self.Read_joint_positions().values)
+        except DeviceReadError as error:
+            Logger.instance().error(f"[{self.name}] {error}")
+            return []
 
     def Get_tcp_positions(self) -> list:
         try:
-                output = nrc_interface.VectorDouble()
-                output.resize(self.MAX_JOINT_COUNT)
-
-                result = nrc_interface.get_current_position(
-                    self.command_fd,
-                    self.TCP_COORD,
-                    output
-                )
-
-                if result != 0:
-                    Logger.instance().error(f"[{self.name}] get_current_position failed: {result}")
-                    return [0.0] * self.TCP_DIM
-
-                return [float(value) for value in output][:self.TCP_DIM]
-
-        except Exception as e:
-                Logger.instance().error(f"[{self.name}] get_current_position error: {e}")
-                return [0.0] * self.TCP_DIM
+            return list(self.Read_tcp_positions().values)
+        except DeviceReadError as error:
+            Logger.instance().error(f"[{self.name}] {error}")
+            return []
 
     def Move_j(
         self,
@@ -301,6 +304,9 @@ class NrcArm(BaseRobotArm):
             return False
 
         try:
+            if not self.is_connected:
+                raise RuntimeError("NRC 未连接")
+            target_positions = validate_positions(target_positions, self.MAX_JOINT_COUNT)
             pos = nrc_interface.VectorDouble()
             pos.resize(self.MAX_JOINT_COUNT)
             for i, v in enumerate(target_positions):

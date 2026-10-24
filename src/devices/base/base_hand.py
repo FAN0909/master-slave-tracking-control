@@ -33,7 +33,12 @@ class BaseHand(ABC):
         pass
 
     @abstractmethod
+    def Read_joint_positions(self):
+        """返回带接收时间和序号的 PositionFeedback；失败抛出 DeviceReadError。"""
+        pass
+
+    @abstractmethod
     def Get_joint_positions(self) -> list:
-        """get joints pos."""
+        """读取关节位置；失败返回空列表。"""
         pass
 

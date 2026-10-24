@@ -1,6 +1,7 @@
 import threading
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import List
+from src.shared_data.device_feedback import FeedbackStatus
 
 # ===================== 状态结构体 =====================
 @dataclass
@@ -9,6 +10,7 @@ class MasterState:
     joints: List[float]
     tcp: List[float]
     name: str = ""  # 当前主手设备名称
+    feedback: FeedbackStatus = field(default_factory=FeedbackStatus)
     # 后续扩展在这里追加字段，如：
     # force: List[float]
     # timestamp: float
@@ -20,6 +22,7 @@ class MasterState:
             joints=self.joints.copy(),
             tcp=self.tcp.copy(),
             name=self.name,
+            feedback=self.feedback,
         )
 
 
@@ -29,6 +32,8 @@ class SlaveState:
     joints: List[float]
     tcp: List[float]
     name: str = ""  # 当前从手设备名称
+    feedback: FeedbackStatus = field(default_factory=FeedbackStatus)
+    tcp_timestamp_ns: int = 0
     # 后续扩展：force、status、imu等
 
     def snapshot(self):
@@ -37,6 +42,8 @@ class SlaveState:
             joints=self.joints.copy(),
             tcp=self.tcp.copy(),
             name=self.name,
+            feedback=self.feedback,
+            tcp_timestamp_ns=self.tcp_timestamp_ns,
         )
 
 @dataclass
@@ -44,6 +51,7 @@ class HandState:
     """灵巧手整套状态：由独立线程更新"""
     joints: List[float]          # 手指关节位置
     name: str = ""               # 当前手设备名称，如 "LinkerO6"
+    feedback: FeedbackStatus = field(default_factory=FeedbackStatus)
     # 后续扩展在这里追加字段，如：
     # force: List[float]         # 各关节力/力矩
     # tactile: List[float]       # 触觉
@@ -55,6 +63,7 @@ class HandState:
         return HandState(
             joints=self.joints.copy(),
             name=self.name,
+            feedback=self.feedback,
         )
 
     

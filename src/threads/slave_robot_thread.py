@@ -7,6 +7,7 @@ from PySide6.QtCore import QObject, Signal, Slot, QTimer, Qt
 from src.devices.drivers_factory import create_slave_arm
 from src.shared_data.robot_share_data import RobotSharedMemory, SlaveState
 from src.shared_data.capture_ring_buffer import CaptureRingBuffer
+from src.shared_data.device_feedback import FeedbackStatus, validate_positions
 from src.controller.teleop_controller import MasterSlaveTeleopCalculator
 class SlaveRobotThread(QObject):
 
@@ -53,8 +54,7 @@ class SlaveRobotThread(QObject):
 
         def reset_shared_positions(self):
             self.shared_data.slave.update_partial(
-                joints=[0.0] * self.arm.MAX_JOINT_COUNT,
-                tcp=[0.0] * self.arm.TCP_DIM,
+                joints=[], tcp=[], feedback=FeedbackStatus(), tcp_timestamp_ns=0,
             )
             self.shared_data.slave_increment.update_partial(
                 delta_joints=[0.0] * self.arm.MAX_JOINT_COUNT,
@@ -96,15 +96,23 @@ class SlaveRobotThread(QObject):
         def OnTimerTriggeredReadPos(self):
             if not self.if_connected or self.arm is None:
                 return
-            joint_pos = self.arm.Get_joint_positions()
-            tcp_pos = self.arm.Get_tcp_positions()
-            sample_timestamp_ns = monotonic_ns()
-
-            self.shared_data.slave.update_partial(joints=joint_pos, tcp=tcp_pos)
-            self.capture_buffer.append(
-                SlaveState(joints=joint_pos.copy(), tcp=tcp_pos.copy(), name=self.arm.name),
-                sample_timestamp_ns,
-            )
+            try:
+                joints = self.arm.Read_joint_positions()
+                tcp = self.arm.Read_tcp_positions()
+            except Exception as error:
+                previous = self.shared_data.slave.read().feedback
+                if previous.error != str(error) or previous.valid:
+                    Logger.instance().error(f"[{self.arm.name}] {error}")
+                self.shared_data.slave.update_partial(
+                    joints=[], tcp=[], feedback=previous.failure(error), tcp_timestamp_ns=0,
+                )
+                return
+            joint_pos, tcp_pos = list(joints.values), list(tcp.values)
+            state = SlaveState(joint_pos, tcp_pos, self.arm.name,
+                               FeedbackStatus.success(joints), tcp.timestamp_ns)
+            self.shared_data.slave.write(state)
+            # 两次读取均完成后，这份联合状态才可供时间对齐读取。
+            self.capture_buffer.append(state.snapshot(), max(joints.timestamp_ns, tcp.timestamp_ns))
 
             self.sig_joint_positions.emit(joint_pos)
             self.sig_tcp_positions.emit(tcp_pos)
@@ -140,6 +148,7 @@ class SlaveRobotThread(QObject):
                 self.servo_target_positions = None
                 self.capture_buffer.clear()
                 self.action_buffer.clear()
+                self.reset_shared_positions()
                 self.sig_disconnect_result.emit(True, "disconnected successfully")
                 return True
             else:
@@ -240,14 +249,26 @@ class SlaveRobotThread(QObject):
             if self.if_running_follow:
                 return
 
+            if (not self.if_connected or not self.if_power_on or self.arm is None
+                    or not self.shared_data.master.read().feedback.is_fresh()
+                    or not self.shared_data.slave.read().feedback.is_fresh()):
+                Logger.instance().error("主从手尚未获得有效且未超时的反馈，无法启动跟随")
+                self.sig_follow_result.emit(False)
+                return
+
+            try:
+                self.servo_target_positions = list(self.arm.Read_joint_positions().values)
+            except Exception as error:
+                Logger.instance().error(f"跟随初始位置读取失败：{error}")
+                self.sig_follow_result.emit(False)
+                return
+
             if not self.if_servoj_open:
                 self.OpenServoJ()
             if not self.if_servoj_open:
                 Logger.instance().error("ServoJ未打开，无法启动跟随")
                 self.sig_follow_result.emit(False)
                 return
-            # 初始化伺服目标为当前从手位置
-            self.servo_target_positions = self.arm.Get_joint_positions()
             # 重置遥操作零点（内部读取当前主手作为基准）
             ok = self.teleop_controller.reset()
             if not ok:
@@ -298,7 +319,14 @@ class SlaveRobotThread(QObject):
                 return
 
             # 同一份主手快照同时用于从手跟随和第七轴扳机判断。
-            master_joints = self.shared_data.master.read().joints
+            master_state = self.shared_data.master.read()
+            if (not master_state.feedback.is_fresh()
+                    or not self.shared_data.slave.read().feedback.is_fresh()):
+                Logger.instance().error("主从手反馈无效或已超时，停止跟随")
+                self.action_buffer.clear()
+                self.StopFollow()
+                return
+            master_joints = master_state.joints
             delta = self.teleop_controller.compute_increment(master_joints)
             # 启动跟随时记录的第七轴角度是扳机“松开”位置；读数无效时跳过本次判断。
             if (self.hand_trigger_start_deg is not None and len(master_joints) >= 7
@@ -316,13 +344,16 @@ class SlaveRobotThread(QObject):
                     self.hand_trigger_closed = False
                     self.sig_hand_closed_changed.emit(False)
                     Logger.instance().info(f"hand 扳机松开：第七轴变化 {travel_deg:.2f}°")
-            if self.servo_target_positions is None:
-                self.servo_target_positions = self.arm.Get_joint_positions()
-            # 叠加增量
-            self.servo_target_positions = [
-                target + d
-                for target, d in zip(self.servo_target_positions, delta)
-            ]
-            target = list(self.servo_target_positions)
-            if self.arm.Set_servoJ_pos(target):
+            try:
+                validate_positions(self.servo_target_positions, self.arm.MAX_JOINT_COUNT)
+                validate_positions(delta, self.arm.MAX_JOINT_COUNT)
+                target = [position + change for position, change
+                          in zip(self.servo_target_positions, delta)]
+                if not self.arm.Set_servoJ_pos(target):
+                    raise RuntimeError("ServoJ 指令发送失败")
+                self.servo_target_positions = target
                 self.action_buffer.append(target.copy(), monotonic_ns())
+            except Exception as error:
+                Logger.instance().error(f"跟随停止：{error}")
+                self.action_buffer.clear()
+                self.StopFollow()

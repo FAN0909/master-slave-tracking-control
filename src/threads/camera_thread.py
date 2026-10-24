@@ -1,8 +1,11 @@
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
+from time import monotonic_ns
+import numpy as np
 from numpy import ndarray
 
 from src.devices.drivers_factory import create_camera
 from src.shared_data.capture_ring_buffer import CaptureRingBuffer
+from src.shared_data.device_feedback import FeedbackStatus, DEFAULT_MAX_AGE_NS
 from src.ui.log_stream import Logger
 
 
@@ -18,6 +21,7 @@ class CameraThread(QObject):
         self.camera = None
         self.capture_buffer = capture_buffer
         self.if_connected = False
+        self.feedback_status = FeedbackStatus()
         self.timer_read_frame = QTimer(self)
         self.timer_read_frame.timeout.connect(self.OnTimerTriggeredReadFrame)
 
@@ -43,6 +47,7 @@ class CameraThread(QObject):
         self.camera = camera
         self.if_connected = True
         self.capture_buffer.clear()
+        self.feedback_status = FeedbackStatus()
         self.StartTimer(interval_ms)
         message = f"[{camera.name}] connected successfully"
         Logger.instance().info(message)
@@ -72,6 +77,7 @@ class CameraThread(QObject):
         self.camera = None
         self.if_connected = False
         self.capture_buffer.clear()
+        self.feedback_status = FeedbackStatus()
         message = f"[{name}] disconnected successfully"
         Logger.instance().info(message)
         self.sig_disconnect_result.emit(True, message)
@@ -104,8 +110,30 @@ class CameraThread(QObject):
         try:
             frame = self.camera.Get_color_frame()
         except Exception as error:
-            Logger.instance().error(f"[{self.camera.name}] get color frame failed: {error}")
+            self._invalidate_feedback(error)
             return
-        if frame is not None:
-            self.capture_buffer.append(frame)
-            self.sig_color_frame.emit(frame)
+        if frame is None:
+            # 相机 30 FPS、轮询 20 ms 时没有新帧属于正常情况。
+            if (self.feedback_status.valid
+                    and not self.feedback_status.is_fresh(DEFAULT_MAX_AGE_NS)):
+                self._invalidate_feedback("相机帧已超时")
+            return
+        if (not isinstance(frame, ndarray) or frame.dtype != np.uint8
+                or frame.ndim != 3 or frame.shape[2] != 3
+                or frame.shape[0] == 0 or frame.shape[1] == 0):
+            self._invalidate_feedback("相机帧必须是非空的 H×W×3 uint8 BGR 图像")
+            return
+        # 缓存拥有独立内存，不能随驱动下一次采样而被修改。
+        frame = frame.copy()
+        timestamp_ns = monotonic_ns()
+        self.feedback_status = FeedbackStatus(
+            True, timestamp_ns, self.feedback_status.sequence + 1, "",
+        )
+        self.capture_buffer.append(frame, timestamp_ns)
+        self.sig_color_frame.emit(frame)
+
+    def _invalidate_feedback(self, error):
+        if self.feedback_status.valid or self.feedback_status.error != str(error):
+            Logger.instance().error(f"[{self.camera.name}] {error}")
+        self.feedback_status = self.feedback_status.failure(error)
+        self.capture_buffer.clear()

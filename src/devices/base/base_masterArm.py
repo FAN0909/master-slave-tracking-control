@@ -33,8 +33,13 @@ class BaseMasterArm(ABC):
         pass
 
     @abstractmethod
+    def Read_joint_positions(self):
+        """返回带接收时间和序号的 PositionFeedback；失败抛出 DeviceReadError。"""
+        pass
+
+    @abstractmethod
     def Get_joint_positions(self) -> list:
-        """Read the current joint positions."""
+        """Read the current joint positions; return [] on failure."""
         pass
 
     @abstractmethod

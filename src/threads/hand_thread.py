@@ -5,6 +5,7 @@ from time import monotonic_ns
 from PySide6.QtCore import QObject, Signal, Slot,QTimer
 from src.devices.drivers_factory import create_hand
 from src.shared_data.capture_ring_buffer import CaptureRingBuffer
+from src.shared_data.device_feedback import FeedbackStatus
 from src.shared_data.robot_share_data import HandState, RobotSharedMemory
 from src.ui.log_stream import Logger
 
@@ -22,6 +23,8 @@ class HandThread(QObject):
         self.capture_buffer = capture_buffer
         self.action_buffer = action_buffer
         self.if_connected = False
+        self._last_capture_sequence = 0
+        self.recording_locked = False
         self.timer_read_pos = QTimer(self)
         self.timer_read_pos.setInterval(20)
         self.timer_read_pos.timeout.connect(self.OnTimerTriggeredReadPos)
@@ -32,17 +35,18 @@ class HandThread(QObject):
         if not self.if_connected or self.hand is None:
             return
         try:
-            joints = self.hand.Get_joint_positions()
+            sample = self.hand.Read_joint_positions()
         except Exception as error:
-            Logger.instance().error(f"[{self.hand.name}] get joint positions failed: {error}")
-            joints = []
-        sample_timestamp_ns = monotonic_ns()
-        self.shared_data.hand.update_partial(joints=list(joints) if joints else [])
-        if joints:
-            self.capture_buffer.append(
-                HandState(joints=list(joints), name=self.hand.name),
-                sample_timestamp_ns,
-            )
+            previous = self.shared_data.hand.read().feedback
+            if previous.error != str(error) or previous.valid:
+                Logger.instance().error(f"[{self.hand.name}] {error}")
+            self.shared_data.hand.update_partial(joints=[], feedback=previous.failure(error))
+            return
+        state = HandState(list(sample.values), self.hand.name, FeedbackStatus.success(sample))
+        self.shared_data.hand.write(state)
+        if sample.sequence != self._last_capture_sequence:
+            self.capture_buffer.append(state.snapshot(), sample.timestamp_ns)
+            self._last_capture_sequence = sample.sequence
 
     @Slot(str, str, str, str)
     def ConnectHand(self, hand_model, hand_type, comm_type, comm_info) -> bool:
@@ -72,7 +76,8 @@ class HandThread(QObject):
         if self.hand.Connect():
             Logger.instance().info(f"[{self.hand.name}] connected successfully")
             self.if_connected = True
-            self.shared_data.hand.update_partial(name=hand_model, joints=[])
+            self.shared_data.hand.update_partial(name=hand_model, joints=[], feedback=FeedbackStatus())
+            self._last_capture_sequence = 0
             self.capture_buffer.clear()
             self.action_buffer.clear()
             self.timer_read_pos.start()
@@ -92,7 +97,8 @@ class HandThread(QObject):
             self.timer_read_pos.stop()
             Logger.instance().info(f"[{self.hand.name}] disconnected successfully")
             self.if_connected = False
-            self.shared_data.hand.update_partial(name="", joints=[])
+            self.shared_data.hand.update_partial(name="", joints=[], feedback=FeedbackStatus())
+            self._last_capture_sequence = 0
             self.capture_buffer.clear()
             self.action_buffer.clear()
             self.sig_disconnect_result.emit(True, f"[{self.hand.name}] disconnected successfully")
@@ -110,18 +116,26 @@ class HandThread(QObject):
         
     @Slot(list)
     def Set_joint_positions(self, positions: list) -> bool:
+        if self.recording_locked:
+            Logger.instance().error("采集期间不能手动改变灵巧手目标")
+            return False
         if self.hand is None:
             Logger.instance().error("灵巧手驱动尚未创建")
             return False
         if self.hand.Set_joint_positions(positions):
+            self.action_buffer.append(list(positions), monotonic_ns())
             Logger.instance().info(f"[{self.hand.name}] set joint positions successfully")
             return True
         else:
+            self.action_buffer.clear()
             Logger.instance().error(f"[{self.hand.name}] failed to set joint positions")
             return False
 
     @Slot(list)
     def Set_speed(self, speed: list) -> bool:
+        if self.recording_locked:
+            Logger.instance().error("采集期间不能手动改变灵巧手速度")
+            return False
         if self.hand is None:
             Logger.instance().error("灵巧手驱动尚未创建")
             return False
@@ -154,11 +168,10 @@ class HandThread(QObject):
             force = action.get("force", hand_config.get("default_force", 255))
             self._execute_action(hand_model, action_name, action["positions"], speed, force,
                                  hand_config["position_range"])
-            # 只记录成功下发的跟随目标位置；设置页测试动作不进入训练数据。
-            self.action_buffer.append(action["positions"].copy(), monotonic_ns())
             Logger.instance().info(f"[{hand_model}] 扳机执行 {action_kind}: {action_name}")
             return True
         except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError) as error:
+            self.action_buffer.clear()
             Logger.instance().error(f"hand {action_kind} 动作执行失败: {error}")
             return False
 
@@ -166,6 +179,9 @@ class HandThread(QObject):
     def ExecuteTestAction(self, hand_model: str, action_name: str,
                           positions: list, speed: int, force: int) -> bool:
         """执行设置页当前表格中的动作，包括尚未保存的数值。"""
+        if self.recording_locked:
+            Logger.instance().error("采集期间不能执行灵巧手测试动作")
+            return False
         try:
             with self.CONFIG_PATH.open(encoding="utf-8") as file:
                 hand_config = json.load(file)[hand_model]
@@ -174,6 +190,7 @@ class HandThread(QObject):
             Logger.instance().info(f"[{hand_model}] 测试动作成功: {action_name}")
             return True
         except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError) as error:
+            self.action_buffer.clear()
             Logger.instance().error(f"[{hand_model}] 测试动作 {action_name} 失败: {error}")
             return False
 
@@ -196,4 +213,9 @@ class HandThread(QObject):
             raise RuntimeError("设置速度失败")
         if not self.hand.Set_joint_positions(positions):
             raise RuntimeError("设置关节位置失败")
+        self.action_buffer.append(list(positions), monotonic_ns())
+
+    @Slot(bool)
+    def SetRecordingLocked(self, locked):
+        self.recording_locked = locked
         

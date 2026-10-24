@@ -20,7 +20,9 @@ class MasterSlaveTeleopCalculator:
         master_state = self.shared_data.master.read()
         master_joints = master_state.joints
         joint_count = len(self.shared_data.slave.read().joints)
-        if not master_joints or len(master_joints) != joint_count:
+        if (not master_state.feedback.is_fresh()
+                or not self.shared_data.slave.read().feedback.is_fresh()
+                or not master_joints or len(master_joints) != joint_count):
             Logger.instance().error("[Teleop] master joint data invalid, reset failed")
             self.master_start_positions = None
             self._sent_offset = None
