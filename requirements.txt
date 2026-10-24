@@ -1,5 +1,4 @@
-# Python 3.12; application, bundled drivers, and LeRobot v3 recording.
---extra-index-url https://download.pytorch.org/whl/cpu
+# Python 3.12; application and bundled drivers.
 numpy==2.2.6
 PySide6==6.11.2
 PyYAML==6.0.3
@@ -7,6 +6,3 @@ pymodbus==3.5.1
 python-can==4.6.1
 pyrealsense2==2.59.1.11053
 pyserial==3.5
-torch==2.11.0+cpu
-torchvision==0.26.0+cpu
-lerobot[dataset]==0.6.1

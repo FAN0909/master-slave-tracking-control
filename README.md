@@ -17,18 +17,7 @@
 
 RealSense 相机还需要本机具备相应硬件和系统驱动。如果在另一台电脑上启动失败，请记录其操作系统与架构、`python3.12 --version`、完整的失败命令与报错，以及 `ldd vendor/nrc/_nrc_host.so` 的输出。
 
-## 采集 LeRobot v3 episode
-
-LeRobot v3 所需依赖已包含在 `requirements.txt` 中。PyTorch 使用 PyTorch 软件包索引提供的 CPU 版本。
-
-先连接主手、从手、LinkerO6 灵巧手和三路相机，再启动主从跟随。界面中选择的保存路径是数据集的上级目录；保存的 episode 会追加到其中的 `lerobot_v3/` 数据集。
-
-- **StartRecod**：以 20 FPS 开始采集一条 episode，并暂存同步数据。
-- **StopRecod**：停止本条 episode 的采集。
-- **Save episode**：在后台将本条 episode 写入 LeRobot v3 数据集。
-- **Discard episode**：丢弃本条 episode 的暂存数据。
-
-保存完成前请保持程序运行。目前数据集使用固定任务描述 `Teleoperated manipulation`。采集中断或失败时，暂存目录 `.episode_*` 会保留在所选保存路径下，供检查原始帧。录制过程要求连续的 20 FPS 时间点；缺帧的 episode 不能作为正常固定帧率 episode 保存。
+界面保留 StartRecod、StopRecod、Save episode 和 Discard episode 按钮，当前未绑定功能。
 
 ---
 
@@ -51,15 +40,4 @@ The bundled NRC extension, `vendor/nrc/_nrc_host.so`, also needs the system libr
 
 The RealSense camera also needs its hardware and system driver on the machine running the app. If startup fails on another computer, record its OS and architecture, `python3.12 --version`, the complete failing command and error output, and the output of `ldd vendor/nrc/_nrc_host.so`.
 
-## Record LeRobot v3 episodes
-
-LeRobot v3 dependencies are included in `requirements.txt`. PyTorch uses CPU wheels from the PyTorch package index.
-
-Connect the master arm, slave arm, LinkerO6 hand, and all three cameras, then start teleoperation. The selected Save path is the parent directory of the dataset. Saved episodes are appended to `lerobot_v3/` inside it.
-
-- **StartRecod**: Start one episode at 20 FPS and stage synchronized data.
-- **StopRecod**: Stop capturing the current episode.
-- **Save episode**: Write the episode to the LeRobot v3 dataset in the background.
-- **Discard episode**: Delete the staged data for the current episode.
-
-Keep the app open until saving finishes. The dataset currently uses the fixed task description `Teleoperated manipulation`. An interrupted or failed capture leaves its `.episode_*` staging directory under the selected Save path for inspection. Recording requires consecutive 20 FPS ticks; an episode with missing ticks cannot be saved as a regular fixed-FPS episode.
+The StartRecod, StopRecod, Save episode, and Discard episode buttons remain visible and currently have no actions assigned.
