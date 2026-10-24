@@ -29,7 +29,7 @@ class MasterRobotThread(QObject):
 
         def reset_shared_positions(self):
             self.shared_data.master.update_partial(
-                joints=[0.0] * self.arm.MAX_JOINT_COUNT,
+                joints=[],
                 tcp=[0.0] * self.arm.TCP_DIM,
             )
 
@@ -82,20 +82,30 @@ class MasterRobotThread(QObject):
             if not self.if_connected:
                 return
             # 获取主手关节位置（弧度）
-            joint_pos = self.arm.Get_joint_positions()
+            sample = self.arm.Get_joint_sample()
+            if sample is None:
+                self.shared_data.master.update_partial(joints=[])
+                return
+            joint_pos, sample_timestamp_ns = sample
+            if monotonic_ns() - sample_timestamp_ns > 200_000_000:
+                self.shared_data.master.update_partial(joints=[])
+                return
+            previous = self.capture_buffer.latest()
+            if previous is not None and sample_timestamp_ns <= previous.timestamp_ns:
+                return
 
             # 弧度转换为角度
             joint_pos_deg = [
                 math.degrees(pos)
                 for pos in joint_pos
             ]
-            sample_timestamp_ns = monotonic_ns()
             # Gello 不提供 TCP 位姿，这里沿用共享状态中的零占位。
             tcp_pos = [0.0] * self.arm.TCP_DIM
             self.shared_data.master.update_partial(joints=joint_pos_deg, tcp=tcp_pos)
             self.capture_buffer.append(
                 MasterState(joints=joint_pos_deg.copy(), tcp=tcp_pos.copy(), name=self.arm.name),
                 sample_timestamp_ns,
+                "device_feedback",
             )
 
             # 发送角度数据

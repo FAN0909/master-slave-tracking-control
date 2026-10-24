@@ -267,6 +267,21 @@ class Ui_MainWindow(object):
 
         self.gridLayout = QGridLayout()
         self.gridLayout.setObjectName(u"gridLayout")
+        self.label_record_task = QLabel(self.groupBox_follow_control)
+        self.label_record_task.setObjectName(u"label_record_task")
+
+        self.gridLayout.addWidget(self.label_record_task, 2, 0, 1, 1)
+
+        self.lineEdit_record_task = QLineEdit(self.groupBox_follow_control)
+        self.lineEdit_record_task.setObjectName(u"lineEdit_record_task")
+
+        self.gridLayout.addWidget(self.lineEdit_record_task, 2, 1, 1, 4)
+
+        self.label_record_status = QLabel(self.groupBox_follow_control)
+        self.label_record_status.setObjectName(u"label_record_status")
+
+        self.gridLayout.addWidget(self.label_record_status, 3, 0, 1, 5)
+
         self.pushButton_start_recod = QPushButton(self.groupBox_follow_control)
         self.pushButton_start_recod.setObjectName(u"pushButton_start_recod")
 
@@ -613,6 +628,9 @@ class Ui_MainWindow(object):
         self.label_follow_interval.setText(QCoreApplication.translate("MainWindow", u"Interval (ms)", None))
         self.lineEdit_follow_rate.setText(QCoreApplication.translate("MainWindow", u"20", None))
         self.pushButton_slave_home_pos.setText(QCoreApplication.translate("MainWindow", u"Home", None))
+        self.label_record_task.setText(QCoreApplication.translate("MainWindow", u"Task", None))
+        self.lineEdit_record_task.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Describe the task, e.g. pick up the block and place it in the box", None))
+        self.label_record_status.setText(QCoreApplication.translate("MainWindow", u"Ready to record", None))
         self.pushButton_start_recod.setText(QCoreApplication.translate("MainWindow", u"StartRecod", None))
         self.pushButton_stop_recod.setText(QCoreApplication.translate("MainWindow", u"StopRecod", None))
         self.pushButton_discard_episode.setText(QCoreApplication.translate("MainWindow", u"Discard episode", None))

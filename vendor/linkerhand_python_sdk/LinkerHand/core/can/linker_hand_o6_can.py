@@ -15,6 +15,9 @@ class LinkerHandO6Can:
         self.open_can = OpenCan(load_yaml=yaml)
 
         self.x01 = [0] * 6 # 关节位置
+        self._state_condition = threading.Condition()
+        self._state_sequence = 0
+        self._state_timestamp_ns = None
         self.x02 = [-1] * 6 # 转矩限制
         self.x05 = [0] * 6 # 速度
         self.x07 = [-1] * 6 # 加速度
@@ -140,15 +143,7 @@ class LinkerHandO6Can:
         try:
             self.bus.send(msg)
         except can.CanError as e:
-            print(f"Failed to send message: {e}")
-            self.open_can.open_can(self.can_channel)
-            time.sleep(1)
-            self.is_can = self.open_can.is_can_up_sysfs(interface=self.can_channel)
-            time.sleep(1)
-            if self.is_can:
-                self.bus = can.interface.Bus(channel=self.can_channel, interface="socketcan", bitrate=self.baudrate)
-            else:
-                print("Reconnecting CAN devices ....")
+            raise RuntimeError(f"CAN send failed: {e}") from e
         time.sleep(sleep)
 
     def set_joint_positions(self, joint_angles):
@@ -223,7 +218,12 @@ class LinkerHandO6Can:
             if len(list(response_data)) == 0:
                 return
             if frame_type == 0x01:   # 0x01
-                self.x01 = list(response_data)
+                if len(response_data) == 6:
+                    with self._state_condition:
+                        self.x01 = list(response_data)
+                        self._state_timestamp_ns = time.monotonic_ns()
+                        self._state_sequence += 1
+                        self._state_condition.notify_all()
             elif frame_type == 0x02:    # 0x02
                 self.x02 = list(response_data)
             elif frame_type == 0x05: # Set speed
@@ -311,8 +311,16 @@ class LinkerHandO6Can:
         return self.version
 
     def get_current_status(self):
+        return self.get_current_status_sample()[0]
+
+    def get_current_status_sample(self):
+        with self._state_condition:
+            sequence = self._state_sequence
         self.send_frame(0x01, [],sleep=0.005)
-        return self.x01
+        with self._state_condition:
+            if not self._state_condition.wait_for(lambda: self._state_sequence > sequence, timeout=0.08):
+                raise TimeoutError("No new CAN joint feedback received")
+            return self.x01.copy(), self._state_timestamp_ns
         
     def get_current_pub_status(self):
         return self.x01

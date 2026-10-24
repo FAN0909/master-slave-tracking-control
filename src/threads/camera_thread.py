@@ -102,10 +102,10 @@ class CameraThread(QObject):
         if not self.if_connected or self.camera is None:
             return
         try:
-            frame = self.camera.Get_color_frame()
+            sample = self.camera.Get_color_sample()
         except Exception as error:
             Logger.instance().error(f"[{self.camera.name}] get color frame failed: {error}")
             return
-        if frame is not None:
-            self.capture_buffer.append(frame)
-            self.sig_color_frame.emit(frame)
+        if sample is not None:
+            self.capture_buffer.append(sample.data, sample.timestamp_ns, sample.timestamp_source)
+            self.sig_color_frame.emit(sample.data)

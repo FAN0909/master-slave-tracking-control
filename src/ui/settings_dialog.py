@@ -117,6 +117,8 @@ class SettingsDialog(QDialog):
             bool(connected_model)
             and connected_model == self._displayed_hand_model
             and bool(self.ui.comboBox_hand_actions_test.currentText())
+            and not (self.parent() is not None and hasattr(self.parent(), "episode_recorder")
+                     and self.parent().episode_recorder.state in ("recording", "stopping"))
         )
 
     def test_hand_action(self):

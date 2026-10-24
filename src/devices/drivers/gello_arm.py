@@ -1,4 +1,5 @@
 import json
+import math
 import subprocess
 from pathlib import Path
 
@@ -111,22 +112,24 @@ class GelloArm(BaseMasterArm):
             self.is_connected = False
             return False
 
-    def Get_joint_positions(self) -> list:
+    def Get_joint_sample(self):
+        """返回真实反馈时间和关节角；未就绪、断流或维度异常均拒绝。"""
         try:
-            pos = self.dynamixel_driver.get_joints()
-            if pos is None:
-                return [0.0] * self.MAX_JOINT_COUNT
-
+            sample = self.dynamixel_driver.get_joint_sample()
+            if sample is None:
+                return None
+            pos, timestamp_ns = sample
             values = [float(value) for value in pos]
-            if len(values) < self.MAX_JOINT_COUNT:
-                values.extend([0.0] * (self.MAX_JOINT_COUNT - len(values)))
-            elif len(values) > self.MAX_JOINT_COUNT:
-                values = values[: self.MAX_JOINT_COUNT]
-            return values
-
+            if len(values) != self.MAX_JOINT_COUNT or not all(map(math.isfinite, values)):
+                raise ValueError("主手反馈维度或数值无效")
+            return values, timestamp_ns
         except Exception as e:
             Logger.instance().error(f"[{self.name}] get_current_position error: {e}")
-            return [0.0] * self.MAX_JOINT_COUNT
+            return None
+
+    def Get_joint_positions(self) -> list:
+        sample = self.Get_joint_sample()
+        return sample[0] if sample else []
 
 
     def Enable(self) -> bool:

@@ -136,13 +136,13 @@ class NrcArm(BaseRobotArm):
 
                 if result != 0:
                     Logger.instance().error(f"[{self.name}] get_current_position failed: {result}")
-                    return [0.0] * self.MAX_JOINT_COUNT
+                    return []
 
                 return [float(value) for value in output]
 
         except Exception as e:
                 Logger.instance().error(f"[{self.name}] get_current_position error: {e}")
-                return [0.0] * self.MAX_JOINT_COUNT
+                return []
 
     def Get_tcp_positions(self) -> list:
         try:
@@ -157,13 +157,13 @@ class NrcArm(BaseRobotArm):
 
                 if result != 0:
                     Logger.instance().error(f"[{self.name}] get_current_position failed: {result}")
-                    return [0.0] * self.TCP_DIM
+                    return []
 
                 return [float(value) for value in output][:self.TCP_DIM]
 
         except Exception as e:
                 Logger.instance().error(f"[{self.name}] get_current_position error: {e}")
-                return [0.0] * self.TCP_DIM
+                return []
 
     def Move_j(
         self,

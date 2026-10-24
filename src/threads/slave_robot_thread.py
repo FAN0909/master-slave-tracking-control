@@ -53,8 +53,8 @@ class SlaveRobotThread(QObject):
 
         def reset_shared_positions(self):
             self.shared_data.slave.update_partial(
-                joints=[0.0] * self.arm.MAX_JOINT_COUNT,
-                tcp=[0.0] * self.arm.TCP_DIM,
+                joints=[],
+                tcp=[],
             )
             self.shared_data.slave_increment.update_partial(
                 delta_joints=[0.0] * self.arm.MAX_JOINT_COUNT,
@@ -96,8 +96,16 @@ class SlaveRobotThread(QObject):
         def OnTimerTriggeredReadPos(self):
             if not self.if_connected or self.arm is None:
                 return
-            joint_pos = self.arm.Get_joint_positions()
-            tcp_pos = self.arm.Get_tcp_positions()
+            try:
+                joint_pos = self.arm.Get_joint_positions()
+                tcp_pos = self.arm.Get_tcp_positions()
+                if (len(joint_pos) != self.arm.MAX_JOINT_COUNT or len(tcp_pos) != self.arm.TCP_DIM
+                        or not all(math.isfinite(value) for value in joint_pos + tcp_pos)):
+                    raise ValueError("从手反馈不完整或包含无效数值")
+            except Exception as error:
+                self.shared_data.slave.update_partial(joints=[], tcp=[])
+                Logger.instance().error(f"从手采样失败：{error}")
+                return
             sample_timestamp_ns = monotonic_ns()
 
             self.shared_data.slave.update_partial(joints=joint_pos, tcp=tcp_pos)
@@ -248,6 +256,11 @@ class SlaveRobotThread(QObject):
                 return
             # 初始化伺服目标为当前从手位置
             self.servo_target_positions = self.arm.Get_joint_positions()
+            if (len(self.servo_target_positions) != self.arm.MAX_JOINT_COUNT
+                    or not all(map(math.isfinite, self.servo_target_positions))):
+                Logger.instance().error("从手反馈无效，无法开启跟随")
+                self.sig_follow_result.emit(False)
+                return
             # 重置遥操作零点（内部读取当前主手作为基准）
             ok = self.teleop_controller.reset()
             if not ok:
@@ -299,6 +312,17 @@ class SlaveRobotThread(QObject):
 
             # 同一份主手快照同时用于从手跟随和第七轴扳机判断。
             master_joints = self.shared_data.master.read().joints
+            if (len(master_joints) != self.arm.MAX_JOINT_COUNT
+                    or not all(map(math.isfinite, master_joints))):
+                self.StopFollow()
+                Logger.instance().error("主手反馈无效或已断流，跟随已停止")
+                return
+            slave_joints = self.shared_data.slave.read().joints
+            if (len(slave_joints) != self.arm.MAX_JOINT_COUNT
+                    or not all(map(math.isfinite, slave_joints))):
+                self.StopFollow()
+                Logger.instance().error("从手反馈无效，跟随已停止")
+                return
             delta = self.teleop_controller.compute_increment(master_joints)
             # 启动跟随时记录的第七轴角度是扳机“松开”位置；读数无效时跳过本次判断。
             if (self.hand_trigger_start_deg is not None and len(master_joints) >= 7

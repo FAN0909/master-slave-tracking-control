@@ -4,6 +4,7 @@ except ImportError:  # pragma: no cover - runtime fallback for systems without t
     rs = None
 
 import numpy as np
+from time import monotonic_ns, time_ns
 
 
 class RealSenseManager:
@@ -37,7 +38,13 @@ class RealSenseManager:
         if serial_number:
             config.enable_device(serial_number)
         config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-        pipeline.start(config)
+        profile = pipeline.start(config)
+        for sensor in profile.get_device().query_sensors():
+            if sensor.supports(rs.option.global_time_enabled):
+                try:
+                    sensor.set_option(rs.option.global_time_enabled, 1)
+                except RuntimeError:
+                    pass  # 某些设备不支持全局时钟，逐帧记录 fallback 来源。
         self.pipeline = pipeline
         self.config = config
 
@@ -53,8 +60,8 @@ class RealSenseManager:
     def is_connected(self):
         return self.pipeline is not None
 
-    def get_color_frame(self) -> np.ndarray | None:
-        """返回一帧 BGR8 图像；未连接或没有新帧时返回 None。"""
+    def get_color_sample(self):
+        """返回 BGR 图像、映射到单调时钟的采集时间及时间戳来源。"""
         if self.pipeline is None:
             return None
 
@@ -67,5 +74,20 @@ class RealSenseManager:
         if not color_frame:
             return None
 
-        # SDK 帧缓冲区可能随帧对象释放而失效，交给上层独立的数组。
-        return np.asanyarray(color_frame.get_data()).copy()
+        arrival_ns = monotonic_ns()
+        domain = color_frame.get_frame_timestamp_domain()
+        if domain in (rs.timestamp_domain.global_time, rs.timestamp_domain.system_time):
+            timestamp_ns = int(color_frame.get_timestamp() * 1_000_000) + arrival_ns - time_ns()
+            if timestamp_ns < 0 or timestamp_ns > arrival_ns + 5_000_000:
+                return None  # 全局时钟尚未收敛时，不把错误时间戳伪装成新帧。
+            # 全局时钟的微小估计误差不能制造未来样本。
+            timestamp_ns = min(timestamp_ns, arrival_ns)
+            source = f"realsense_{domain.name}"
+        else:
+            timestamp_ns, source = arrival_ns, "host_arrival"
+        # SDK 内存随帧对象释放，必须复制后才能交给采集和预览线程。
+        return np.asanyarray(color_frame.get_data()).copy(), timestamp_ns, source
+
+    def get_color_frame(self) -> np.ndarray | None:
+        sample = self.get_color_sample()
+        return sample[0] if sample else None

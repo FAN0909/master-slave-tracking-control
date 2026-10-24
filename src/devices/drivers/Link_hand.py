@@ -1,4 +1,5 @@
 import math
+from time import monotonic_ns
 
 from src.devices.base.base_hand import BaseHand
 from vendor.linkerhand_python_sdk.LinkerHand.linker_hand_api import LinkerHandApi
@@ -88,25 +89,34 @@ class LinkHand(BaseHand):
             Logger.instance().error(f"[{self.name}] set joint positions failed: {e}")
             return False
 
-    def Get_joint_positions(self) -> list:
-        """读取灵巧手当前关节位置；读取失败时返回空列表。"""
+    def Get_joint_sample(self):
+        """返回关节位置与实际反馈时间；读取失败时返回 None。"""
         if not self.is_connected or self.hand_api is None:
             Logger.instance().error(f"[{self.name}] hand API not connected")
-            return []
+            return None
 
         try:
-            positions = self.hand_api.get_state()
+            backend = self.hand_api.hand
+            if hasattr(backend, "get_current_status_sample"):
+                positions, timestamp_ns = backend.get_current_status_sample()
+            else:
+                positions = self.hand_api.get_state()
+                timestamp_ns = monotonic_ns()
             if positions is None:
                 raise ValueError("SDK returned no joint positions")
             joint_positions = [float(value) for value in positions]
             if len(joint_positions) != self.MAX_JOINTS() or not all(
-                math.isfinite(value) for value in joint_positions
+                math.isfinite(value) and 0 <= value <= 255 for value in joint_positions
             ):
                 raise ValueError(f"invalid joint positions: {joint_positions}")
-            return joint_positions
+            return joint_positions, timestamp_ns
         except Exception as error:
             Logger.instance().error(f"[{self.name}] get joint positions failed: {error}")
-            return []
+            return None
+
+    def Get_joint_positions(self) -> list:
+        sample = self.Get_joint_sample()
+        return sample[0] if sample else []
 
     def Set_speed(self, speed=[100]*5) -> bool:
         # Implement the logic to set speed for LinkHandO6

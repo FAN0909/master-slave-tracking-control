@@ -16,6 +16,7 @@ class CaptureSample(Generic[T]):
 
     timestamp_ns: int
     data: T
+    timestamp_source: str = "host_monotonic"
 
 
 class CaptureRingBuffer(Generic[T]):
@@ -49,7 +50,8 @@ class CaptureRingBuffer(Generic[T]):
         with self._lock:
             return len(self._samples)
 
-    def append(self, data: T, timestamp_ns: int | None = None) -> CaptureSample[T]:
+    def append(self, data: T, timestamp_ns: int | None = None,
+               timestamp_source: str = "host_monotonic") -> CaptureSample[T]:
         """写入数据并返回样本；满容量时自动覆盖最早写入的样本。
 
         timestamp_ns 为单调时钟时间戳，单位纳秒；省略时使用写入时的
@@ -59,7 +61,8 @@ class CaptureRingBuffer(Generic[T]):
             timestamp_ns = monotonic_ns()
         if isinstance(timestamp_ns, bool) or not isinstance(timestamp_ns, int) or timestamp_ns < 0:
             raise ValueError("timestamp_ns must be a non-negative integer")
-        sample = CaptureSample(timestamp_ns=timestamp_ns, data=data)
+        sample = CaptureSample(timestamp_ns=timestamp_ns, data=data,
+                               timestamp_source=timestamp_source)
         with self._lock:
             if len(self._samples) == self.capacity:
                 self._dropped_count += 1

@@ -24,6 +24,7 @@ from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.devices.drivers.Link_hand import LinkHand
 from src.recording.data_synchronizer import DataSynchronizer
 from src.recording.episode_recorder import EpisodeRecorder, FPS as RECORDING_FPS
+from src.recording.settings import SETTINGS as RECORDING_SETTINGS
 
 STYLE_PATH = Path(__file__).resolve().parent / "src" / "res" / "style" / "main_window.qss"
 
@@ -177,11 +178,11 @@ class MainWindow(QMainWindow):
 
 #region========================================camera====================================================
     def init_camera_threads(self):
-        # 每路相机只缓存最近 5 帧，供后续采集线程按时间戳读取。
+        # 保留约一秒历史，支持后台采样和短暂调度延迟后的补采。
         self.camera_capture_buffers = {
-            "side": CaptureRingBuffer(5),
-            "front": CaptureRingBuffer(5),
-            "hand": CaptureRingBuffer(5),
+            "side": CaptureRingBuffer(30),
+            "front": CaptureRingBuffer(30),
+            "hand": CaptureRingBuffer(30),
         }
 
         # Side camera
@@ -531,6 +532,12 @@ class MainWindow(QMainWindow):
             slave_action_buffer=self.slave_action_buffer,
             hand_action_buffer=self.hand_action_buffer,
             fps=RECORDING_FPS,
+            alignment_delay_ns=RECORDING_SETTINGS.alignment_delay_ms * 1_000_000,
+            max_camera_age_ns=RECORDING_SETTINGS.max_camera_age_ms * 1_000_000,
+            max_robot_age_ns=RECORDING_SETTINGS.max_robot_age_ms * 1_000_000,
+            max_slave_action_age_ns=RECORDING_SETTINGS.max_slave_action_age_ms * 1_000_000,
+            max_catchup_ns=RECORDING_SETTINGS.max_catchup_ms * 1_000_000,
+            queue_capacity=RECORDING_SETTINGS.queue_capacity,
         )
         self.episode_recorder = EpisodeRecorder(synchronizer)
         self.episode_recorder.capture_finished.connect(self.on_recording_stopped)
@@ -539,7 +546,18 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_stop_recod.clicked.connect(self.stop_recording)
         self.ui.pushButton_save_episode.clicked.connect(self.save_episode)
         self.ui.pushButton_discard_episode.clicked.connect(self.discard_episode)
+        self.ui.lineEdit_record_task.setText(RECORDING_SETTINGS.task)
+        self._record_status_timer = QTimer(self)
+        self._record_status_timer.timeout.connect(self.update_recording_status)
+        self._record_status_timer.start(500)
         self.update_recording_buttons()
+
+    def update_recording_status(self):
+        recorder = self.episode_recorder
+        state = {"idle": "就绪", "recording": "录制中", "stopping": "正在停止",
+                 "stopped": "待保存", "saving": "正在保存"}[recorder.state]
+        count = recorder.frame_count
+        self.ui.label_record_status.setText(f"{state} · {count} 帧 · {count / RECORDING_FPS:.1f} 秒 · {RECORDING_FPS} FPS")
 
     def update_recording_buttons(self):
         state = self.episode_recorder.state
@@ -547,9 +565,13 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_stop_recod.setEnabled(state == "recording")
         self.ui.pushButton_save_episode.setEnabled(
             state == "stopped" and self.episode_recorder.frame_count > 0
-            and not self.episode_recorder.capture_error
         )
         self.ui.pushButton_discard_episode.setEnabled(state == "stopped")
+        self.ui.lineEdit_record_task.setEnabled(state == "idle")
+        self.ui.lineEdit_save_file_path.setEnabled(state == "idle")
+        self.ui.pushButton_browse_save_path.setEnabled(state == "idle")
+        self.settings_dialog.update_hand_test_button()
+        self.update_recording_status()
 
     def _recording_message(self, message, error=False):
         (Logger.instance().error if error else Logger.instance().info)(message)
@@ -566,15 +588,18 @@ class MainWindow(QMainWindow):
             self._recording_message("请先连接全部设备和三路相机，并启动主从跟随", error=True)
             return
         if self.episode_recorder.synchronizer.align_at(monotonic_ns(), 0) is None:
-            self._recording_message("采集数据尚未就绪：检查三路相机及 hand/slave 指令缓存", error=True)
+            details = self.episode_recorder.synchronizer.missing_source_details(monotonic_ns())
+            self._recording_message(f"采集数据尚未就绪：{details}", error=True)
             return
         path = self.ui.lineEdit_save_file_path.text().strip()
         if not path:
             self._recording_message("请先选择保存目录", error=True)
             return
         try:
-            self.episode_recorder.start(Path(path).expanduser().resolve())
+            self.hand_worker.recording_active.set()
+            self.episode_recorder.start(Path(path).expanduser().resolve(), self.ui.lineEdit_record_task.text())
         except Exception as error:
+            self.hand_worker.recording_active.clear()
             self._recording_message(f"启动采集失败：{error}", error=True)
             return
         self.update_recording_buttons()
@@ -587,9 +612,10 @@ class MainWindow(QMainWindow):
 
     def on_recording_stopped(self, count, error):
         self.episode_recorder.mark_stopped()
+        self.hand_worker.recording_active.clear()
         self.update_recording_buttons()
         message = f"采集停止：{count} 帧" + (
-            f"；{error}；临时数据：{self.episode_recorder.staging_dir}"
+            f"；{error}；可保存此前 {count} 条连续有效帧；临时数据：{self.episode_recorder.staging_dir}"
             if error else "；可保存或丢弃"
         )
         self._recording_message(message, error=bool(error) or count == 0)
@@ -761,6 +787,8 @@ class MainWindow(QMainWindow):
         else:
             self.if_start_follow = False
             self.ui.pushButton_start_follow.setText("Start Follow")
+            if hasattr(self, "episode_recorder") and self.episode_recorder.state == "recording":
+                self.stop_recording()
 
 # endregion================= 遥操作控制器 =================
 

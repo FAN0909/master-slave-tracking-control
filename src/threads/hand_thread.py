@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from time import monotonic_ns
+from threading import Event
 
 from PySide6.QtCore import QObject, Signal, Slot,QTimer
 from src.devices.drivers_factory import create_hand
@@ -22,6 +23,7 @@ class HandThread(QObject):
         self.capture_buffer = capture_buffer
         self.action_buffer = action_buffer
         self.if_connected = False
+        self.recording_active = Event()
         self.timer_read_pos = QTimer(self)
         self.timer_read_pos.setInterval(20)
         self.timer_read_pos.timeout.connect(self.OnTimerTriggeredReadPos)
@@ -32,16 +34,17 @@ class HandThread(QObject):
         if not self.if_connected or self.hand is None:
             return
         try:
-            joints = self.hand.Get_joint_positions()
+            sample = self.hand.Get_joint_sample()
         except Exception as error:
             Logger.instance().error(f"[{self.hand.name}] get joint positions failed: {error}")
-            joints = []
-        sample_timestamp_ns = monotonic_ns()
+            sample = None
+        joints, sample_timestamp_ns = sample if sample else ([], 0)
         self.shared_data.hand.update_partial(joints=list(joints) if joints else [])
         if joints:
             self.capture_buffer.append(
                 HandState(joints=list(joints), name=self.hand.name),
                 sample_timestamp_ns,
+                "device_feedback",
             )
 
     @Slot(str, str, str, str)
@@ -110,10 +113,14 @@ class HandThread(QObject):
         
     @Slot(list)
     def Set_joint_positions(self, positions: list) -> bool:
+        if self.recording_active.is_set():
+            Logger.instance().error("录制期间请使用跟随控制灵巧手")
+            return False
         if self.hand is None:
             Logger.instance().error("灵巧手驱动尚未创建")
             return False
         if self.hand.Set_joint_positions(positions):
+            self.action_buffer.append([int(value) for value in positions], monotonic_ns())
             Logger.instance().info(f"[{self.hand.name}] set joint positions successfully")
             return True
         else:
@@ -122,6 +129,9 @@ class HandThread(QObject):
 
     @Slot(list)
     def Set_speed(self, speed: list) -> bool:
+        if self.recording_active.is_set():
+            Logger.instance().error("录制期间不能手动改变灵巧手速度")
+            return False
         if self.hand is None:
             Logger.instance().error("灵巧手驱动尚未创建")
             return False
@@ -154,8 +164,6 @@ class HandThread(QObject):
             force = action.get("force", hand_config.get("default_force", 255))
             self._execute_action(hand_model, action_name, action["positions"], speed, force,
                                  hand_config["position_range"])
-            # 只记录成功下发的跟随目标位置；设置页测试动作不进入训练数据。
-            self.action_buffer.append(action["positions"].copy(), monotonic_ns())
             Logger.instance().info(f"[{hand_model}] 扳机执行 {action_kind}: {action_name}")
             return True
         except (OSError, ValueError, KeyError, TypeError, AttributeError, RuntimeError) as error:
@@ -166,6 +174,9 @@ class HandThread(QObject):
     def ExecuteTestAction(self, hand_model: str, action_name: str,
                           positions: list, speed: int, force: int) -> bool:
         """执行设置页当前表格中的动作，包括尚未保存的数值。"""
+        if self.recording_active.is_set():
+            Logger.instance().error("录制期间不能执行设置页测试动作")
+            return False
         try:
             with self.CONFIG_PATH.open(encoding="utf-8") as file:
                 hand_config = json.load(file)[hand_model]
@@ -196,4 +207,5 @@ class HandThread(QObject):
             raise RuntimeError("设置速度失败")
         if not self.hand.Set_joint_positions(positions):
             raise RuntimeError("设置关节位置失败")
+        self.action_buffer.append(list(positions), monotonic_ns())
         

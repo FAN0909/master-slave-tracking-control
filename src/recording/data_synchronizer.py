@@ -1,21 +1,23 @@
-"""按固定时间轴，从设备环形缓存组成一条同步采集样本。"""
+"""独立线程上的固定时间轴采样；短暂调度延迟从历史缓存补取。"""
 
 from dataclasses import dataclass
 from queue import Full, Queue
+from threading import Event, Thread, current_thread
 from time import monotonic_ns
 from typing import Mapping
 
 from numpy import ndarray
-from PySide6.QtCore import QObject, QTimer, Qt, Signal, Slot
+from PySide6.QtCore import QObject, Signal
 
 from src.shared_data.capture_ring_buffer import CaptureRingBuffer, CaptureSample
 from src.shared_data.robot_share_data import HandState, MasterState, SlaveState
 
+SOURCE_NAMES = ("master", "slave", "hand", "side_camera", "front_camera",
+                "hand_camera", "slave_action", "hand_action")
+
 
 @dataclass(frozen=True)
 class AlignedFrame:
-    """一个目标时刻对应的原始样本，保留各设备实际采样时间戳。"""
-
     tick_index: int
     timestamp_ns: int
     master: CaptureSample[MasterState]
@@ -29,170 +31,142 @@ class AlignedFrame:
 
 
 class DataSynchronizer(QObject):
-    """在所属 Qt 线程内定时对齐数据，交给另一个线程从 output_queue 取走。
+    """只使用目标时刻之前的样本，命令按零阶保持，禁止跳帧或无限积压。
 
-    设备线程继续独立写各自的环形缓存。相机、状态和 Slave action 过期时
-    跳过该时刻；Hand action 仅在下发时更新，因此一直沿用最近一次命令。
-    输出队列满时停止采集并发出错误，防止未写盘数据无限积压。
+    延迟一个采样周期查询历史，让设备线程有时间发布已采集的反馈。
+    Qt 信号仅负责通知界面，实际采样不依赖 Qt 事件循环。
     """
 
     sig_error = Signal(str)
 
-    def __init__(
-        self,
-        *,
-        master_buffer: CaptureRingBuffer[MasterState],
-        slave_buffer: CaptureRingBuffer[SlaveState],
-        hand_buffer: CaptureRingBuffer[HandState],
-        camera_buffers: Mapping[str, CaptureRingBuffer[ndarray]],
-        slave_action_buffer: CaptureRingBuffer[list[float]],
-        hand_action_buffer: CaptureRingBuffer[list[int]],
-        fps: int = 20,
-        max_camera_age_ns: int = 100_000_000,
-        max_robot_age_ns: int = 200_000_000,
-        max_slave_action_age_ns: int = 100_000_000,
-        queue_capacity: int = 20,
-    ) -> None:
+    def __init__(self, *, master_buffer: CaptureRingBuffer[MasterState],
+                 slave_buffer: CaptureRingBuffer[SlaveState],
+                 hand_buffer: CaptureRingBuffer[HandState],
+                 camera_buffers: Mapping[str, CaptureRingBuffer[ndarray]],
+                 slave_action_buffer: CaptureRingBuffer[list[float]],
+                 hand_action_buffer: CaptureRingBuffer[list[int]],
+                 fps: int = 20, max_camera_age_ns: int = 80_000_000,
+                 max_robot_age_ns: int = 150_000_000,
+                 max_slave_action_age_ns: int = 100_000_000,
+                 alignment_delay_ns: int = 50_000_000,
+                 max_catchup_ns: int = 250_000_000, queue_capacity: int = 40):
         super().__init__()
-        if isinstance(fps, bool) or not isinstance(fps, int) or not 1 <= fps <= 1000:
-            raise ValueError("fps must be an integer between 1 and 1000")
-        if isinstance(queue_capacity, bool) or not isinstance(queue_capacity, int) or queue_capacity <= 0:
+        if type(fps) is not int or not 1 <= fps <= 120:
+            raise ValueError("fps must be an integer between 1 and 120")
+        if type(queue_capacity) is not int or queue_capacity <= 0:
             raise ValueError("queue_capacity must be a positive integer")
-        for name, age in (
-            ("max_camera_age_ns", max_camera_age_ns),
-            ("max_robot_age_ns", max_robot_age_ns),
-            ("max_slave_action_age_ns", max_slave_action_age_ns),
-        ):
-            if isinstance(age, bool) or not isinstance(age, int) or age < 0:
-                raise ValueError(f"{name} must be a non-negative integer")
-        missing = {"side", "front", "hand"} - camera_buffers.keys()
-        if missing:
-            raise ValueError(f"camera_buffers missing: {', '.join(sorted(missing))}")
-
-        self.master_buffer = master_buffer
-        self.slave_buffer = slave_buffer
-        self.hand_buffer = hand_buffer
-        self.camera_buffers = dict(camera_buffers)
-        self.slave_action_buffer = slave_action_buffer
-        self.hand_action_buffer = hand_action_buffer
-        self.max_camera_age_ns = max_camera_age_ns
-        self.max_robot_age_ns = max_robot_age_ns
-        self.max_slave_action_age_ns = max_slave_action_age_ns
-        self.output_queue: Queue[AlignedFrame] = Queue(maxsize=queue_capacity)
+        for value in (max_camera_age_ns, max_robot_age_ns, max_slave_action_age_ns,
+                      alignment_delay_ns, max_catchup_ns):
+            if type(value) is not int or value < 0:
+                raise ValueError("time limits must be non-negative integers")
+        if {"side", "front", "hand"} - camera_buffers.keys():
+            raise ValueError("camera_buffers requires side, front and hand")
+        self.fps = fps
         self.period_ns = 1_000_000_000 // fps
-        self._start_timestamp_ns: int | None = None
-        self._last_tick_index = 0
+        self.alignment_delay_ns = alignment_delay_ns
+        self.max_catchup_ns = max_catchup_ns
+        self.sources = {
+            "master": (master_buffer, max_robot_age_ns),
+            "slave": (slave_buffer, max_robot_age_ns),
+            "hand": (hand_buffer, max_robot_age_ns),
+            **{f"{name}_camera": (camera_buffers[name], max_camera_age_ns)
+               for name in ("side", "front", "hand")},
+            "slave_action": (slave_action_buffer, max_slave_action_age_ns),
+            "hand_action": (hand_action_buffer, None),
+        }
+        self.output_queue = Queue(maxsize=queue_capacity)
+        self.finished = Event()
+        self.finished.set()
+        self._stop = Event()
+        self._thread = None
+        self._start_timestamp_ns = None
+        self._next_tick = 0
+        self.error = ""
         self.skipped_count = 0
         self.overflow_count = 0
-        self.timer = QTimer(self)
-        self.timer.setTimerType(Qt.TimerType.PreciseTimer)
-        self.timer.setInterval(round(1000 / fps))
-        self.timer.timeout.connect(self.collect_once)
+
+    @property
+    def is_running(self):
+        return not self.finished.is_set()
 
     def align_at(self, timestamp_ns: int, tick_index: int) -> AlignedFrame | None:
-        """取每路在目标时刻及之前的最近样本；任一路缺失则返回 None。"""
-        master = self.master_buffer.latest_before_or_at(timestamp_ns, self.max_robot_age_ns)
-        slave = self.slave_buffer.latest_before_or_at(timestamp_ns, self.max_robot_age_ns)
-        hand = self.hand_buffer.latest_before_or_at(timestamp_ns, self.max_robot_age_ns)
-        side_camera = self.camera_buffers["side"].latest_before_or_at(timestamp_ns, self.max_camera_age_ns)
-        front_camera = self.camera_buffers["front"].latest_before_or_at(timestamp_ns, self.max_camera_age_ns)
-        hand_camera = self.camera_buffers["hand"].latest_before_or_at(timestamp_ns, self.max_camera_age_ns)
-        slave_action = self.slave_action_buffer.latest_before_or_at(
-            timestamp_ns, self.max_slave_action_age_ns
-        )
-        hand_action = self.hand_action_buffer.latest_before_or_at(timestamp_ns)
-        if any(sample is None for sample in (
-            master, slave, hand, side_camera, front_camera, hand_camera,
-            slave_action, hand_action,
-        )):
+        samples = {name: buffer.latest_before_or_at(timestamp_ns, limit)
+                   for name, (buffer, limit) in self.sources.items()}
+        if any(sample is None for sample in samples.values()):
             return None
-        return AlignedFrame(
-            tick_index=tick_index,
-            timestamp_ns=timestamp_ns,
-            master=master,
-            slave=slave,
-            hand=hand,
-            side_camera=side_camera,
-            front_camera=front_camera,
-            hand_camera=hand_camera,
-            slave_action=slave_action,
-            hand_action=hand_action,
-        )
+        return AlignedFrame(tick_index, timestamp_ns, **samples)
 
-    def _missing_source_details(self, timestamp_ns: int) -> str:
-        """说明目标时刻哪些数据源没有可用样本，以及最近样本的年龄。"""
-        sources = (
-            ("master", self.master_buffer, self.max_robot_age_ns),
-            ("slave", self.slave_buffer, self.max_robot_age_ns),
-            ("hand", self.hand_buffer, self.max_robot_age_ns),
-            ("side_camera", self.camera_buffers["side"], self.max_camera_age_ns),
-            ("front_camera", self.camera_buffers["front"], self.max_camera_age_ns),
-            ("hand_camera", self.camera_buffers["hand"], self.max_camera_age_ns),
-            ("slave_action", self.slave_action_buffer, self.max_slave_action_age_ns),
-            ("hand_action", self.hand_action_buffer, None),
-        )
+    def missing_source_details(self, timestamp_ns: int) -> str:
         details = []
-        for name, buffer, max_age_ns in sources:
-            if buffer.latest_before_or_at(timestamp_ns, max_age_ns) is not None:
+        for name, (buffer, limit) in self.sources.items():
+            if buffer.latest_before_or_at(timestamp_ns, limit) is not None:
                 continue
-            previous = buffer.latest_before_or_at(timestamp_ns)
-            if previous is not None and max_age_ns is not None:
-                age_ms = (timestamp_ns - previous.timestamp_ns) / 1_000_000
-                details.append(f"{name} 过期 {age_ms:.1f} ms（上限 {max_age_ns / 1_000_000:.0f} ms）")
-            elif previous is not None:
-                details.append(f"{name} 采样时尚未到达")
-            elif buffer.latest() is None:
-                details.append(f"{name} 无样本")
+            sample = buffer.latest_before_or_at(timestamp_ns)
+            if sample is None:
+                details.append(f"{name} 无可用样本")
             else:
-                details.append(f"{name} 目标时刻前无样本")
-        return "；".join(details) or "采样时数据尚未到达"
+                age = (timestamp_ns - sample.timestamp_ns) / 1e6
+                details.append(f"{name} 过期 {age:.1f} ms（上限 {limit / 1e6:.0f} ms）")
+        return "；".join(details)
 
-    @Slot()
     def start(self) -> bool:
-        """从新的固定帧率时间轴开始；先清空上一段的输出队列。"""
-        if self.timer.isActive():
+        if self.is_running or not self.output_queue.empty():
             return False
-        if not self.output_queue.empty():
-            self.sig_error.emit("采集输出队列尚有未处理的数据")
-            return False
+        self.error = ""
+        self.skipped_count = self.overflow_count = 0
         self._start_timestamp_ns = monotonic_ns()
-        self._last_tick_index = 0
-        self.skipped_count = 0
-        self.overflow_count = 0
-        self.timer.start()
+        self._next_tick = 0
+        self._stop.clear()
+        self.finished.clear()
+        self._thread = Thread(target=self._run, name="capture-synchronizer", daemon=True)
+        self._thread.start()
         return True
 
-    @Slot()
-    def stop(self) -> None:
-        """停止产生新样本；已有输出仍留在队列中供写盘线程处理。"""
-        self.timer.stop()
+    def stop(self):
+        self._stop.set()
 
-    @Slot()
-    def collect_once(self) -> None:
-        """处理当前时间轴上的一个时刻；缺帧时立即停止并报告原因。"""
-        if self._start_timestamp_ns is None or not self.timer.isActive():
+    def wait(self):
+        if self._thread is not None and self._thread is not current_thread():
+            self._thread.join()
+
+    def _fail(self, message):
+        self.error = message
+        self._stop.set()
+        self.sig_error.emit(message)
+
+    def collect_once(self, now_ns: int | None = None):
+        """按顺序补齐所有已到期 tick；可单独调用以验证调度行为。"""
+        if self._start_timestamp_ns is None or self._stop.is_set():
             return
-        tick_index = (monotonic_ns() - self._start_timestamp_ns) // self.period_ns
-        if tick_index <= self._last_tick_index:
+        now_ns = monotonic_ns() if now_ns is None else now_ns
+        target = self._start_timestamp_ns + self._next_tick * self.period_ns
+        if now_ns - target - self.alignment_delay_ns > self.max_catchup_ns:
+            self._fail("采集线程延迟超过历史补采窗口，已保留此前连续有效帧")
             return
-        missed_ticks = tick_index - self._last_tick_index - 1
-        self.skipped_count += missed_ticks
-        self._last_tick_index = tick_index
-        if missed_ticks:
-            self.stop()
-            self.sig_error.emit(f"同步定时器延迟，跳过 {missed_ticks} 帧（当前 tick {tick_index}）")
-            return
-        target_timestamp_ns = self._start_timestamp_ns + tick_index * self.period_ns
-        frame = self.align_at(target_timestamp_ns, tick_index)
-        if frame is None:
-            self.skipped_count += 1
-            details = self._missing_source_details(target_timestamp_ns)
-            self.stop()
-            self.sig_error.emit(f"同步 tick {tick_index} 缺少可用数据：{details}")
-            return
+        while target + self.alignment_delay_ns <= now_ns and not self._stop.is_set():
+            frame = self.align_at(target, self._next_tick)
+            if frame is None:
+                self.skipped_count += 1
+                self._fail(f"同步 tick {self._next_tick} 缺少数据：{self.missing_source_details(target)}")
+                return
+            try:
+                self.output_queue.put_nowait(frame)
+            except Full:
+                self.overflow_count += 1
+                self._fail("写盘跟不上采集，队列已满；已保留此前连续有效帧")
+                return
+            self._next_tick += 1
+            target = self._start_timestamp_ns + self._next_tick * self.period_ns
+
+    def _run(self):
         try:
-            self.output_queue.put_nowait(frame)
-        except Full:
-            self.overflow_count += 1
-            self.stop()
-            self.sig_error.emit("采集输出队列已满，采集已停止")
+            while not self._stop.is_set():
+                deadline = (self._start_timestamp_ns + self._next_tick * self.period_ns
+                            + self.alignment_delay_ns)
+                if self._stop.wait(max(0, (deadline - monotonic_ns()) / 1e9)):
+                    break
+                self.collect_once()
+        except Exception as error:
+            self._fail(f"采集调度失败：{error}")
+        finally:
+            self.finished.set()

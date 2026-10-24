@@ -193,6 +193,7 @@ class DynamixelDriver(DynamixelDriverProtocol):
         """
         self._ids = ids
         self._joint_angles = None
+        self._joint_timestamp_ns = None
         self._velocities = None
         self._lock = Lock()
         self._port = port
@@ -530,6 +531,7 @@ class DynamixelDriver(DynamixelDriverProtocol):
                         )
                 self._joint_angles = _joint_angles
                 self._velocities = _velocities
+                self._joint_timestamp_ns = time.monotonic_ns()
             # self._groupSyncRead.clearParam()
 
     def get_positions_and_velocities(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -540,6 +542,15 @@ class DynamixelDriver(DynamixelDriverProtocol):
         positions_in_radians = self._joint_angles.copy() / 2048.0 * np.pi
         velocities_in_units = self._velocities.copy() * 0.229 * 2 * np.pi / 60
         return positions_in_radians, velocities_in_units
+
+    def get_joint_sample(self):
+        """Return the actual bus-update time, never the time the cache is read."""
+        if self._is_fake:
+            return self._fake_joint_angles.copy(), time.monotonic_ns()
+        with self._lock:
+            if self._joint_angles is None or self._joint_timestamp_ns is None:
+                return None
+            return self._joint_angles.copy() / 2048.0 * np.pi, self._joint_timestamp_ns
 
     def get_joints(self) -> np.ndarray:
         if self._is_fake:

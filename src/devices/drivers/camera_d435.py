@@ -3,6 +3,7 @@ import numpy as np
 from src.devices.base.base_camera import BaseCamera
 from src.ui.log_stream import Logger
 from vendor.realsense.realsense_manager import RealSenseManager
+from src.shared_data.capture_ring_buffer import CaptureSample
 
 
 class CameraD435(BaseCamera):
@@ -43,10 +44,18 @@ class CameraD435(BaseCamera):
             return False
 
     def Get_color_frame(self) -> np.ndarray | None:
+        sample = self.Get_color_sample()
+        return sample.data if sample else None
+
+    def Get_color_sample(self):
         if not self.is_connected:
             return None
         try:
-            return self.camera_manager.get_color_frame()
+            sample = self.camera_manager.get_color_sample()
+            if sample is None:
+                return None
+            image, timestamp_ns, source = sample
+            return CaptureSample(timestamp_ns, image, source)
         except Exception as error:
             Logger.instance().error(f"[{self.name}] get color frame failed: {error}")
             return None

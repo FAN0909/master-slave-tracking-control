@@ -366,6 +366,21 @@
            </item>
            <item>
             <layout class="QGridLayout" name="gridLayout">
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_record_task">
+               <property name="text"><string>Task</string></property>
+              </widget>
+             </item>
+             <item row="2" column="1" colspan="4">
+              <widget class="QLineEdit" name="lineEdit_record_task">
+               <property name="placeholderText"><string>Describe the task, e.g. pick up the block and place it in the box</string></property>
+              </widget>
+             </item>
+             <item row="3" column="0" colspan="5">
+              <widget class="QLabel" name="label_record_status">
+               <property name="text"><string>Ready to record</string></property>
+              </widget>
+             </item>
              <item row="1" column="1">
               <widget class="QPushButton" name="pushButton_start_recod">
                <property name="text">
