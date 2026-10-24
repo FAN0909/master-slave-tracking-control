@@ -291,6 +291,41 @@ class DeviceFeedbackTest(unittest.TestCase):
         sent_frame = backend.bus._bus.send.call_args.args[0]
         self.assertEqual(list(sent_frame.data), [0x01, *target])
 
+    def test_modbus_action_read_failure_invalidates_feedback_and_action(self):
+        hand, _ = self.make_hand(modbus="/dev/fake")
+        hand.hand_api.get_state = Mock(side_effect=(
+            [10.] * 6, [10.] * 6, RuntimeError("Modbus timeout"),
+        ))
+        worker = HandThread(self.shared, CaptureRingBuffer(10), CaptureRingBuffer(10))
+        worker.hand, worker.if_connected = hand, True
+        self.shared.hand.update_partial(name="LinkerO6")
+        worker.action_buffer.append([0] * 6)
+        self.assertFalse(worker.ExecuteFollowState(True))
+        self.assertFalse(self.shared.hand.read().feedback.valid)
+        self.assertIn("Modbus timeout", self.shared.hand.read().feedback.error)
+        self.assertEqual(len(worker.action_buffer), 0)
+        self.assertIsNone(worker._configured_speed)
+        self.assertIsNone(worker._configured_force)
+
+    def test_manual_speed_and_disconnect_invalidate_cached_action_parameters(self):
+        hand, _ = self.make_hand()
+        hand.hand_api.set_speed = Mock(wraps=hand.hand_api.set_speed)
+        hand.hand_api.set_torque = Mock(wraps=hand.hand_api.set_torque)
+        worker = HandThread(self.shared, CaptureRingBuffer(10), CaptureRingBuffer(10))
+        worker.hand, worker.if_connected = hand, True
+        self.shared.hand.update_partial(name="LinkerO6")
+        bounds = {"min": 0, "max": 255}
+        worker._execute_action("LinkerO6", "close", [100] * 6, 255, 255, bounds)
+        self.assertTrue(worker.Set_speed([40] * 6))
+        worker._execute_action("LinkerO6", "open", [200] * 6, 255, 255, bounds)
+        self.assertEqual(hand.hand_api.set_speed.call_count, 3)
+        self.assertEqual(hand.hand_api.set_speed.call_args.args[0], [255] * 6)
+        self.assertEqual(hand.hand_api.set_torque.call_count, 1)
+        hand.Disconnect = Mock(return_value=True)
+        self.assertTrue(worker.Disconnect())
+        self.assertIsNone(worker._configured_speed)
+        self.assertIsNone(worker._configured_force)
+
     def test_follow_rejects_missing_initial_feedback(self):
         worker = self.make_slave()
         worker.if_power_on = True

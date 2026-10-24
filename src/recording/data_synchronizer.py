@@ -62,9 +62,13 @@ class DataSynchronizer:
 
     @staticmethod
     def _sample(buffer, name, timestamp_ns, max_age_ns):
-        sample = buffer.latest_before_or_at(timestamp_ns, max_age_ns)
+        sample = buffer.latest_before_or_at(timestamp_ns)
         if sample is None:
-            raise RuntimeError(f"{name} 数据缺失或过期，请检查设备反馈及跟随状态")
+            raise RuntimeError(f"{name} 数据缺失：当前采样点之前没有可用样本，请检查设备反馈及跟随状态")
+        age_ns = timestamp_ns - sample.timestamp_ns
+        if max_age_ns is not None and age_ns > max_age_ns:
+            raise RuntimeError(f"{name} 数据过期：最近样本距采样点 {age_ns / 1e6:.1f} ms，"
+                               f"允许 {max_age_ns / 1e6:.1f} ms；请检查设备反馈及跟随状态")
         return sample
 
     def reset(self):

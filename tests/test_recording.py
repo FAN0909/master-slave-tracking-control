@@ -108,7 +108,7 @@ class RecordingTest(unittest.TestCase):
         timestamp = 5_000_000_000
         rig = RecordingRig(timestamp)
         with patch("src.recording.data_synchronizer.monotonic_ns", return_value=timestamp + 110_000_000):
-            with self.assertRaisesRegex(RuntimeError, "相机"):
+            with self.assertRaisesRegex(RuntimeError, r"side 相机.*110\.0 ms.*100\.0 ms"):
                 rig.sync.align_at(timestamp + 110_000_000, 0)
             rig.sync.align_at(timestamp, 0)
             rig.cameras["side"].append(np.zeros((64, 32, 3), np.uint8), timestamp + 1)
@@ -126,6 +126,76 @@ class RecordingTest(unittest.TestCase):
             rig.buffers["slave"].latest().data.tcp_timestamp_ns = timestamp + 1
             with self.assertRaisesRegex(RuntimeError, "TCP"):
                 rig.sync.align_at(timestamp, 0)
+
+    def test_modbus_trigger_keeps_real_feedback_fresh_during_serial_writes(self):
+        from types import SimpleNamespace
+        from src.devices.drivers.Link_hand import LinkHand
+        from src.threads.hand_thread import HandThread
+
+        timestamp = 5_000_000_000
+        rig = RecordingRig(timestamp)
+        clock = [timestamp]
+        next_tick = [timestamp + 50_000_000]
+        errors, frames = [], []
+
+        def advance(duration_ns):
+            end = clock[0] + duration_ns
+            while next_tick[0] <= end:
+                clock[0] = next_tick[0]
+                for name in ("master", "slave"):
+                    state = getattr(rig.shared, name).read()
+                    state.feedback = FeedbackStatus(True, clock[0], state.feedback.sequence + 1, "")
+                    if name == "slave":
+                        state.tcp_timestamp_ns = clock[0]
+                    getattr(rig.shared, name).write(state)
+                    rig.buffers[name].append(state, clock[0])
+                rig.buffers["slave_action"].append([5.] * 7, clock[0])
+                for buffer in rig.cameras.values():
+                    buffer.append(buffer.latest().data, clock[0])
+                try:
+                    frames.append(rig.sync.align_at(clock[0], len(frames)))
+                except RuntimeError as error:
+                    errors.append(str(error))
+                next_tick[0] += 50_000_000
+            clock[0] = end
+
+        def read_positions():
+            advance(35_000_000)
+            return [10.] * 6  # 实测反馈，与下发的目标故意不同。
+
+        api = SimpleNamespace(
+            get_state=Mock(side_effect=read_positions),
+            set_torque=Mock(side_effect=lambda values: advance(55_000_000)),
+            set_speed=Mock(side_effect=lambda values: advance(55_000_000)),
+            finger_move=Mock(side_effect=lambda values: advance(55_000_000)),
+        )
+        hand = LinkHand("LinkerO6", modbus="/dev/fake")
+        hand.is_connected, hand.hand_api = True, api
+        hand._feedback.publish([4.] * 6, timestamp)
+        worker = HandThread(rig.shared, rig.buffers["hand"], rig.buffers["hand_action"])
+        worker.hand, worker.if_connected = hand, True
+        worker._last_capture_sequence = 1
+        with patch("src.recording.data_synchronizer.monotonic_ns", side_effect=lambda: clock[0]), \
+                patch("src.shared_data.device_feedback.monotonic_ns", side_effect=lambda: clock[0]), \
+                patch("src.threads.hand_thread.monotonic_ns", side_effect=lambda: clock[0]):
+            worker._execute_action("LinkerO6", "close", [100] * 6, 255, 255, {"min": 0, "max": 255})
+            worker.OnTimerTriggeredReadPos()
+            worker._execute_action("LinkerO6", "open", [200] * 6, 255, 255, {"min": 0, "max": 255})
+            worker.OnTimerTriggeredReadPos()
+            self.assertFalse(errors, errors)
+            self.assertEqual(api.set_torque.call_count, 1)
+            self.assertEqual(api.set_speed.call_count, 1)
+            self.assertEqual(api.finger_move.call_count, 2)
+            worker._execute_action("LinkerO6", "changed", [50] * 6, 64, 128, {"min": 0, "max": 255})
+            self.assertEqual(api.set_torque.call_args.args[0], [128] * 6)
+            self.assertEqual(api.set_speed.call_args.args[0], [64] * 6)
+            self.assertEqual(api.set_torque.call_count, 2)
+            self.assertEqual(api.set_speed.call_count, 2)
+            self.assertFalse(errors, errors)
+            self.assertEqual(rig.shared.hand.read().joints, [10.] * 6)
+            self.assertEqual(rig.buffers["hand_action"].latest().data, [50] * 6)
+            self.assertTrue(frames)
+            self.assertTrue(all(frame.source_ages_ms[2] <= 150 for frame in frames))
 
     def test_capture_stages_continuous_ticks_and_discards(self):
         recorder = EpisodeRecorder(SyntheticSynchronizer())

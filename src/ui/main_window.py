@@ -270,17 +270,17 @@ class Ui_MainWindow(object):
         self.pushButton_start_recod = QPushButton(self.groupBox_follow_control)
         self.pushButton_start_recod.setObjectName(u"pushButton_start_recod")
 
-        self.gridLayout.addWidget(self.pushButton_start_recod, 1, 1, 1, 1)
+        self.gridLayout.addWidget(self.pushButton_start_recod, 2, 1, 1, 1)
 
         self.pushButton_stop_recod = QPushButton(self.groupBox_follow_control)
         self.pushButton_stop_recod.setObjectName(u"pushButton_stop_recod")
 
-        self.gridLayout.addWidget(self.pushButton_stop_recod, 1, 2, 1, 1)
+        self.gridLayout.addWidget(self.pushButton_stop_recod, 2, 2, 1, 1)
 
         self.pushButton_discard_episode = QPushButton(self.groupBox_follow_control)
         self.pushButton_discard_episode.setObjectName(u"pushButton_discard_episode")
 
-        self.gridLayout.addWidget(self.pushButton_discard_episode, 1, 4, 1, 1)
+        self.gridLayout.addWidget(self.pushButton_discard_episode, 2, 4, 1, 1)
 
         self.label_2 = QLabel(self.groupBox_follow_control)
         self.label_2.setObjectName(u"label_2")
@@ -290,7 +290,7 @@ class Ui_MainWindow(object):
         self.pushButton_save_episode = QPushButton(self.groupBox_follow_control)
         self.pushButton_save_episode.setObjectName(u"pushButton_save_episode")
 
-        self.gridLayout.addWidget(self.pushButton_save_episode, 1, 3, 1, 1)
+        self.gridLayout.addWidget(self.pushButton_save_episode, 2, 3, 1, 1)
 
         self.lineEdit_save_file_path = QLineEdit(self.groupBox_follow_control)
         self.lineEdit_save_file_path.setObjectName(u"lineEdit_save_file_path")
@@ -301,6 +301,16 @@ class Ui_MainWindow(object):
         self.pushButton_browse_save_path.setObjectName(u"pushButton_browse_save_path")
 
         self.gridLayout.addWidget(self.pushButton_browse_save_path, 0, 4, 1, 1)
+
+        self.label_task = QLabel(self.groupBox_follow_control)
+        self.label_task.setObjectName(u"label_task")
+
+        self.gridLayout.addWidget(self.label_task, 1, 0, 1, 1)
+
+        self.lineEdit_task = QLineEdit(self.groupBox_follow_control)
+        self.lineEdit_task.setObjectName(u"lineEdit_task")
+
+        self.gridLayout.addWidget(self.lineEdit_task, 1, 1, 1, 4)
 
 
         self.verticalLayout_2.addLayout(self.gridLayout)
@@ -561,6 +571,9 @@ class Ui_MainWindow(object):
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
+#if QT_CONFIG(shortcut)
+        self.label_task.setBuddy(self.lineEdit_task)
+#endif // QT_CONFIG(shortcut)
 
         self.menubar.addAction(self.menuSet_Param)
 
@@ -619,6 +632,11 @@ class Ui_MainWindow(object):
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"Save path", None))
         self.pushButton_save_episode.setText(QCoreApplication.translate("MainWindow", u"Save episode", None))
         self.pushButton_browse_save_path.setText(QCoreApplication.translate("MainWindow", u"Browse...", None))
+        self.label_task.setText(QCoreApplication.translate("MainWindow", u"Task", None))
+        self.lineEdit_task.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u4f8b\u5982\uff1a\u5c06\u7ea2\u8272\u65b9\u5757\u653e\u5165\u76d2\u5b50", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_task.setToolTip(QCoreApplication.translate("MainWindow", u"\u6bcf\u6761 episode \u4f7f\u7528\u5f00\u59cb\u91c7\u96c6\u65f6\u586b\u5199\u7684\u4efb\u52a1\u63cf\u8ff0\uff1b\u4fdd\u5b58\u6216\u4e22\u5f03\u540e\u53ef\u4fee\u6539\u3002", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_camera_monitor.setTitle(QCoreApplication.translate("MainWindow", u"Camera Monitoring (3 Live Feeds)", None))
         self.label_camera_monitor_hint.setText(QCoreApplication.translate("MainWindow", u"Device Connections and Preview", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"Model", None))

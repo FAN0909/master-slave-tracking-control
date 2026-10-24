@@ -3,7 +3,7 @@ import math
 import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QFileDialog, QInputDialog, QMainWindow, QLineEdit
+from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QLineEdit
 from PySide6.QtCore import Q_ARG, QMetaObject, QSignalBlocker, Qt, QThread, Signal, Slot, QTimer
 from PySide6.QtGui import QImage, QPixmap
 
@@ -528,7 +528,6 @@ class MainWindow(QMainWindow):
             health_check=self.recording_device_error,
         )
         self.episode_recorder = EpisodeRecorder(synchronizer, self)
-        self._recording_task = ""
         self._close_after_recording = False
         self._closing_devices = False
         self._hand_recording_locked = False
@@ -569,6 +568,7 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_discard_episode.setEnabled(state == "stopped")
         busy = state in ("recording", "stopping", "saving", "discarding")
         self.ui.lineEdit_save_file_path.setReadOnly(busy)
+        self.ui.lineEdit_task.setReadOnly(state != "idle")
         self.ui.pushButton_browse_save_path.setEnabled(not busy)
         self._lock_recording_controls(state in ("recording", "stopping"))
         if self._close_after_recording and not busy:
@@ -582,14 +582,14 @@ class MainWindow(QMainWindow):
     def start_recording(self):
         if self.episode_recorder.state != "idle":
             return
+        task = self.ui.lineEdit_task.text().strip()
+        if not task:
+            self.recording_message("请先填写 Task 任务描述", True)
+            self.ui.lineEdit_task.setFocus()
+            return
         error = self.recording_device_error()
         if error:
             self.recording_message(error, True)
-            return
-        task, accepted = QInputDialog.getText(
-            self, "采集任务", "本条 episode 的任务描述（例如：将红色方块放入盒子）：",
-            text=self._recording_task)
-        if not accepted:
             return
         try:
             path = self.ui.lineEdit_save_file_path.text().strip()
@@ -601,12 +601,11 @@ class MainWindow(QMainWindow):
             metadata = {name: json.loads((config_root / name).read_text(encoding="utf-8"))
                         for name in ("master_arm.json", "slave_arm.json", "hand_control.json")}
             self.episode_recorder.start(Path(path), task, metadata)
-            self._recording_task = task.strip()
         except Exception as error:
             self._lock_recording_controls(False)
             self.recording_message(f"启动采集失败：{error}", True)
             return
-        self.recording_message(f"开始采集 episode（{RECORDING_FPS} FPS）：{self._recording_task}")
+        self.recording_message(f"开始采集 episode（{RECORDING_FPS} FPS）：{task}")
 
     def stop_recording(self):
         self.episode_recorder.stop()

@@ -25,6 +25,8 @@ class HandThread(QObject):
         self.if_connected = False
         self._last_capture_sequence = 0
         self.recording_locked = False
+        self._configured_speed = None
+        self._configured_force = None
         self.timer_read_pos = QTimer(self)
         self.timer_read_pos.setInterval(20)
         self.timer_read_pos.timeout.connect(self.OnTimerTriggeredReadPos)
@@ -33,7 +35,7 @@ class HandThread(QObject):
     def OnTimerTriggeredReadPos(self):
         """定时读取真实关节位置，失败时清空旧读数。"""
         if not self.if_connected or self.hand is None:
-            return
+            return False
         try:
             sample = self.hand.Read_joint_positions()
         except Exception as error:
@@ -41,18 +43,22 @@ class HandThread(QObject):
             if previous.error != str(error) or previous.valid:
                 Logger.instance().error(f"[{self.hand.name}] {error}")
             self.shared_data.hand.update_partial(joints=[], feedback=previous.failure(error))
-            return
+            self._forget_action_parameters()
+            return False
         state = HandState(list(sample.values), self.hand.name, FeedbackStatus.success(sample))
         self.shared_data.hand.write(state)
         if sample.sequence != self._last_capture_sequence:
             self.capture_buffer.append(state.snapshot(), sample.timestamp_ns)
             self._last_capture_sequence = sample.sequence
+        return True
 
     @Slot(str, str, str, str)
     def ConnectHand(self, hand_model, hand_type, comm_type, comm_info) -> bool:
         if self.if_connected:
             self.sig_connect_result.emit(False, "请先断开灵巧手，再连接设备")
             return False
+
+        self._forget_action_parameters()
 
         driver_hand_type = "right" if hand_type == "Right Hand" else "left"
         comm_type = comm_type.strip().lower()
@@ -90,6 +96,7 @@ class HandThread(QObject):
 
     @Slot()
     def Disconnect(self) -> bool:
+        self._forget_action_parameters()
         if self.hand is None:
             self.sig_disconnect_result.emit(False, "灵巧手驱动尚未创建")
             return False
@@ -140,9 +147,11 @@ class HandThread(QObject):
             Logger.instance().error("灵巧手驱动尚未创建")
             return False
         if self.hand.Set_speed(speed):
+            self._configured_speed = tuple(speed)
             Logger.instance().info(f"[{self.hand.name}] set speed successfully")
             return True
         else:
+            self._configured_speed = None
             Logger.instance().error(f"[{self.hand.name}] failed to set speed")
             return False
 
@@ -195,7 +204,7 @@ class HandThread(QObject):
             return False
 
     def _execute_action(self, hand_model, action_name, positions, speed, force, position_range):
-        """在手线程中校验参数并按力矩、速度、位置顺序发送命令。"""
+        """按力矩、速度、位置发送，Modbus 写入步骤之间继续读取真实反馈。"""
         if not self.if_connected or self.hand is None:
             raise RuntimeError("灵巧手未连接")
         if self.shared_data.hand.read().name != hand_model:
@@ -207,13 +216,40 @@ class HandThread(QObject):
             raise ValueError(f"动作 {action_name} 的位置超出配置范围")
         if any(type(value) is not int or not 0 <= value <= 255 for value in (speed, force)):
             raise ValueError(f"动作 {action_name} 的速度或力矩必须是 0～255 的整数")
-        if not self.hand.Set_force([force] * len(positions)):
-            raise RuntimeError("设置力矩失败")
-        if not self.hand.Set_speed([speed] * len(positions)):
-            raise RuntimeError("设置速度失败")
-        if not self.hand.Set_joint_positions(positions):
-            raise RuntimeError("设置关节位置失败")
-        self.action_buffer.append(list(positions), monotonic_ns())
+        force_values = (force,) * len(positions)
+        speed_values = (speed,) * len(positions)
+        try:
+            # 相同参数已成功下发时，不在每次扣动扳机时重复占用串口。
+            if self._configured_force != force_values:
+                if not self.hand.Set_force(list(force_values)):
+                    raise RuntimeError("设置力矩失败")
+                self._configured_force = force_values
+                self._refresh_modbus_feedback()
+            if self._configured_speed != speed_values:
+                if not self.hand.Set_speed(list(speed_values)):
+                    raise RuntimeError("设置速度失败")
+                self._configured_speed = speed_values
+                self._refresh_modbus_feedback()
+            if not self.hand.Set_joint_positions(positions):
+                raise RuntimeError("设置关节位置失败")
+            # 指令时间仍是成功发送的位置写入完成时间，不延迟到读反馈之后。
+            self.action_buffer.append(list(positions), monotonic_ns())
+            self._refresh_modbus_feedback()
+        except Exception:
+            self._forget_action_parameters()
+            raise
+
+    def _refresh_modbus_feedback(self):
+        # 动作槽运行时，同线程 QTimer 无法执行；在每个串口写入后主动读一次。
+        # CAN 接收在线程外进行，不增加额外的 CAN 查询。
+        if getattr(self.hand, "modbus", "None") != "None":
+            if not self.OnTimerTriggeredReadPos():
+                error = self.shared_data.hand.read().feedback.error
+                raise RuntimeError(f"动作期间读取灵巧手反馈失败：{error}")
+
+    def _forget_action_parameters(self):
+        self._configured_speed = None
+        self._configured_force = None
 
     @Slot(bool)
     def SetRecordingLocked(self, locked):
