@@ -270,17 +270,17 @@ class Ui_MainWindow(object):
         self.pushButton_start_recod = QPushButton(self.groupBox_follow_control)
         self.pushButton_start_recod.setObjectName(u"pushButton_start_recod")
 
-        self.gridLayout.addWidget(self.pushButton_start_recod, 2, 1, 1, 1)
+        self.gridLayout.addWidget(self.pushButton_start_recod, 3, 1, 1, 1)
 
         self.pushButton_stop_recod = QPushButton(self.groupBox_follow_control)
         self.pushButton_stop_recod.setObjectName(u"pushButton_stop_recod")
 
-        self.gridLayout.addWidget(self.pushButton_stop_recod, 2, 2, 1, 1)
+        self.gridLayout.addWidget(self.pushButton_stop_recod, 3, 2, 1, 1)
 
         self.pushButton_discard_episode = QPushButton(self.groupBox_follow_control)
         self.pushButton_discard_episode.setObjectName(u"pushButton_discard_episode")
 
-        self.gridLayout.addWidget(self.pushButton_discard_episode, 2, 4, 1, 1)
+        self.gridLayout.addWidget(self.pushButton_discard_episode, 3, 4, 1, 1)
 
         self.label_2 = QLabel(self.groupBox_follow_control)
         self.label_2.setObjectName(u"label_2")
@@ -290,7 +290,7 @@ class Ui_MainWindow(object):
         self.pushButton_save_episode = QPushButton(self.groupBox_follow_control)
         self.pushButton_save_episode.setObjectName(u"pushButton_save_episode")
 
-        self.gridLayout.addWidget(self.pushButton_save_episode, 2, 3, 1, 1)
+        self.gridLayout.addWidget(self.pushButton_save_episode, 3, 3, 1, 1)
 
         self.lineEdit_save_file_path = QLineEdit(self.groupBox_follow_control)
         self.lineEdit_save_file_path.setObjectName(u"lineEdit_save_file_path")
@@ -311,6 +311,16 @@ class Ui_MainWindow(object):
         self.lineEdit_task.setObjectName(u"lineEdit_task")
 
         self.gridLayout.addWidget(self.lineEdit_task, 1, 1, 1, 4)
+
+        self.label_recording_format = QLabel(self.groupBox_follow_control)
+        self.label_recording_format.setObjectName(u"label_recording_format")
+
+        self.gridLayout.addWidget(self.label_recording_format, 2, 0, 1, 1)
+
+        self.comboBox_recording_format = QComboBox(self.groupBox_follow_control)
+        self.comboBox_recording_format.setObjectName(u"comboBox_recording_format")
+
+        self.gridLayout.addWidget(self.comboBox_recording_format, 2, 1, 1, 4)
 
 
         self.verticalLayout_2.addLayout(self.gridLayout)
@@ -573,6 +583,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 #if QT_CONFIG(shortcut)
         self.label_task.setBuddy(self.lineEdit_task)
+        self.label_recording_format.setBuddy(self.comboBox_recording_format)
 #endif // QT_CONFIG(shortcut)
 
         self.menubar.addAction(self.menuSet_Param)
@@ -636,6 +647,10 @@ class Ui_MainWindow(object):
         self.lineEdit_task.setPlaceholderText(QCoreApplication.translate("MainWindow", u"\u4f8b\u5982\uff1a\u5c06\u7ea2\u8272\u65b9\u5757\u653e\u5165\u76d2\u5b50", None))
 #if QT_CONFIG(tooltip)
         self.lineEdit_task.setToolTip(QCoreApplication.translate("MainWindow", u"\u6bcf\u6761 episode \u4f7f\u7528\u5f00\u59cb\u91c7\u96c6\u65f6\u586b\u5199\u7684\u4efb\u52a1\u63cf\u8ff0\uff1b\u4fdd\u5b58\u6216\u4e22\u5f03\u540e\u53ef\u4fee\u6539\u3002", None))
+#endif // QT_CONFIG(tooltip)
+        self.label_recording_format.setText(QCoreApplication.translate("MainWindow", u"Format", None))
+#if QT_CONFIG(tooltip)
+        self.comboBox_recording_format.setToolTip(QCoreApplication.translate("MainWindow", u"\u9009\u62e9 LeRobot \u6570\u636e\u96c6\u683c\u5f0f\uff1b\u4fdd\u5b58\u6216\u4e22\u5f03\u672c\u6761 episode \u540e\u53ef\u5207\u6362\u3002", None))
 #endif // QT_CONFIG(tooltip)
         self.groupBox_camera_monitor.setTitle(QCoreApplication.translate("MainWindow", u"Camera Monitoring (3 Live Feeds)", None))
         self.label_camera_monitor_hint.setText(QCoreApplication.translate("MainWindow", u"Device Connections and Preview", None))

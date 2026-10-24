@@ -366,21 +366,21 @@
            </item>
            <item>
             <layout class="QGridLayout" name="gridLayout">
-             <item row="2" column="1">
+             <item row="3" column="1">
               <widget class="QPushButton" name="pushButton_start_recod">
                <property name="text">
                 <string>StartRecod</string>
                </property>
               </widget>
              </item>
-             <item row="2" column="2">
+             <item row="3" column="2">
               <widget class="QPushButton" name="pushButton_stop_recod">
                <property name="text">
                 <string>StopRecod</string>
                </property>
               </widget>
              </item>
-             <item row="2" column="4">
+             <item row="3" column="4">
               <widget class="QPushButton" name="pushButton_discard_episode">
                <property name="text">
                 <string>Discard episode</string>
@@ -394,7 +394,7 @@
                </property>
               </widget>
              </item>
-             <item row="2" column="3">
+             <item row="3" column="3">
               <widget class="QPushButton" name="pushButton_save_episode">
                <property name="text">
                 <string>Save episode</string>
@@ -428,6 +428,23 @@
                </property>
                <property name="toolTip">
                 <string>每条 episode 使用开始采集时填写的任务描述；保存或丢弃后可修改。</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_recording_format">
+               <property name="text">
+                <string>Format</string>
+               </property>
+               <property name="buddy">
+                <cstring>comboBox_recording_format</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1" colspan="4">
+              <widget class="QComboBox" name="comboBox_recording_format">
+               <property name="toolTip">
+                <string>选择 LeRobot 数据集格式；保存或丢弃本条 episode 后可切换。</string>
                </property>
               </widget>
              </item>

@@ -278,33 +278,132 @@ class RecordingTest(unittest.TestCase):
             self.assertEqual(recorder.frame_count, 1)
 
     def test_recorder_exports_real_videos_from_background_thread(self):
+        for dataset_format, folder in (("v3.0", "lerobot_v3"), ("v2.1", "lerobot_v2_1")):
+            with self.subTest(dataset_format=dataset_format), tempfile.TemporaryDirectory() as directory:
+                recorder = EpisodeRecorder(SyntheticSynchronizer())
+                recorder.start(directory, "place the block", {"test_config": "preserved"},
+                               dataset_format=dataset_format)
+                wait_until(lambda: recorder.frame_count >= 2)
+                recorder.stop()
+                wait_until(lambda: recorder.state == "stopped")
+                staged_manifest = json.loads((recorder.staging_dir / "session.json").read_text())
+                self.assertEqual(staged_manifest["dataset_format"], dataset_format)
+                recorder.save()
+                wait_until(lambda: recorder.state in ("idle", "stopped"), timeout=20)
+                recorder.shutdown()
+                self.assertEqual(recorder.state, "idle")
+                self.assertIsNone(recorder.staging_dir)
+                session = Path(directory) / folder / "meta/recording_sessions/episode_000000.json"
+                manifest = json.loads(session.read_text())
+                self.assertEqual(manifest["device_config"], {"test_config": "preserved"})
+                self.assertEqual(manifest["dataset_format"], dataset_format)
+
+    def test_unknown_format_is_rejected_before_capture_or_export(self):
         recorder = EpisodeRecorder(SyntheticSynchronizer())
         with tempfile.TemporaryDirectory() as directory:
-            recorder.start(directory, "place the block", {"test_config": "preserved"})
-            wait_until(lambda: recorder.frame_count >= 2)
-            recorder.stop()
-            wait_until(lambda: recorder.state == "stopped")
-            recorder.save()
-            wait_until(lambda: recorder.state in ("idle", "stopped"), timeout=20)
-            recorder.shutdown()
+            parent = Path(directory)
+            with self.assertRaisesRegex(ValueError, "不支持的采集格式"):
+                recorder.start(parent, "place the block", dataset_format="v1.0")
             self.assertEqual(recorder.state, "idle")
-            self.assertIsNone(recorder.staging_dir)
-            session = Path(directory) / "lerobot_v3/meta/recording_sessions/episode_000000.json"
-            self.assertEqual(json.loads(session.read_text())["device_config"], {"test_config": "preserved"})
+            self.assertEqual(list(parent.iterdir()), [])
+            staging = self.make_staging(parent, "staging", dataset_format="v1.0")
+            with self.assertRaisesRegex(ValueError, "不支持的采集格式"):
+                export_episode(staging, parent)
+            self.assertEqual(list(parent.iterdir()), [staging])
 
     @staticmethod
-    def make_staging(parent, name, task="place the block"):
+    def make_staging(parent, name, task="place the block", dataset_format=None):
         staging = parent / name
         staging.mkdir()
         start_ns = monotonic_ns()
         for index in range(2):
             np.savez(staging / f"frame_{index:06d}.npz",
                      **frame_at(start_ns + index * 50_000_000, index).arrays())
-        (staging / "session.json").write_text(json.dumps({
+        manifest = {
             "fps": FPS, "task": task, "frame_count": 2, "capture_error": "",
             "start_timestamp_ns": start_ns, "image_shapes": {name: [32, 32, 3] for name in CAMERAS},
-        }))
+        }
+        if dataset_format is not None:
+            manifest["dataset_format"] = dataset_format
+        (staging / "session.json").write_text(json.dumps(manifest))
         return staging
+
+    def test_v21_export_appends_tasks_indices_stats_and_decodable_videos(self):
+        import av
+        import pyarrow.parquet as pq
+        from lerobot.datasets import LeRobotDataset
+        from lerobot.scripts.convert_dataset_v21_to_v30 import convert_dataset
+
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            root = parent / "lerobot_v2_1"
+            for index, task in enumerate(("拿起方块", "放回方块", "拿起方块")):
+                staging = self.make_staging(parent, f"episode{index}", task, dataset_format="v2.1")
+                self.assertEqual(export_episode(staging, parent), index)
+                with self.assertRaisesRegex(RuntimeError, "已保存"):
+                    export_episode(staging, parent)
+                table = pq.read_table(root / f"data/chunk-000/episode_{index:06d}.parquet").to_pydict()
+                self.assertEqual(table["index"], [index * 2, index * 2 + 1])
+                self.assertEqual(table["episode_index"], [index, index])
+                self.assertEqual(table["task_index"], [index % 2, index % 2])
+                np.testing.assert_allclose(table["timestamp"], [0., 1. / FPS])
+                np.testing.assert_allclose(table["action"][0], np.arange(13) + 20)
+                for name in CAMERAS:
+                    video = root / f"videos/chunk-000/observation.images.{name}/episode_{index:06d}.mp4"
+                    with av.open(str(video)) as container:
+                        images = [frame.to_ndarray(format="rgb24") for frame in container.decode(video=0)]
+                    self.assertEqual(len(images), 2)
+                    self.assertGreater(float(images[0][..., 0].mean() - images[0][..., 2].mean()), 100)
+            info = json.loads((root / "meta/info.json").read_text())
+            self.assertEqual(info["codebase_version"], "v2.1")
+            self.assertEqual((info["total_episodes"], info["total_frames"], info["total_tasks"],
+                              info["total_videos"], info["total_chunks"]), (3, 6, 2, 9, 1))
+            self.assertEqual(info["splits"], {"train": "0:3"})
+            stats = json.loads((root / "meta/stats.json").read_text())
+            np.testing.assert_allclose(stats["index"]["mean"], [2.5])
+            np.testing.assert_allclose(stats["index"]["std"], [np.arange(6).std()])
+            np.testing.assert_allclose(stats["episode_index"]["mean"], [1.])
+            np.testing.assert_allclose(stats["task_index"]["mean"], [1. / 3])
+            episode_stats = [json.loads(line) for line in (root / "meta/episodes_stats.jsonl").read_text().splitlines()]
+            self.assertEqual(episode_stats[2]["stats"]["episode_index"]["min"], [2])
+            self.assertEqual(len((root / "meta/tasks.jsonl").read_text().splitlines()), 2)
+            self.assertFalse((parent / "lerobot_v3").exists())
+            self.assertFalse((parent / ".lerobot_v2_1.saving.json").exists())
+            # 用官方旧格式读取/转换流程验证元数据、索引与视频定位可以被重建。
+            convert_dataset(REPO_ID, root=root, push_to_hub=False)
+            dataset = LeRobotDataset(REPO_ID, root=root, video_backend="pyav", return_uint8=True)
+            self.assertEqual((len(dataset), dataset.meta.total_episodes), (6, 3))
+            self.assertEqual([dataset[i]["task"] for i in (0, 2, 4)], ["拿起方块", "放回方块", "拿起方块"])
+            self.assertEqual(tuple(dataset[4]["observation.images.side"].shape), (3, 32, 32))
+
+    def test_v21_failed_append_preserves_marker_and_can_save_elsewhere(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            first = self.make_staging(parent, "first", dataset_format="v2.1")
+            export_episode(first, parent)
+            second = self.make_staging(parent, "second", dataset_format="v2.1")
+            with patch("src.recording.lerobot_v21.write_episode_v21", side_effect=OSError("disk full")):
+                with self.assertRaisesRegex(OSError, "disk full"):
+                    export_episode(second, parent)
+            self.assertTrue((parent / ".lerobot_v2_1.saving.json").exists())
+            self.assertNotIn("saved_to", json.loads((second / "session.json").read_text()))
+            with self.assertRaisesRegex(RuntimeError, "上次保存未完成"):
+                export_episode(second, parent)
+            self.assertEqual(export_episode(second, parent / "recovery"), 0)
+
+    def test_export_rejects_existing_dataset_version_mismatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            parent = Path(directory)
+            first = self.make_staging(parent, "first")
+            export_episode(first, parent)
+            info_path = parent / "lerobot_v3/meta/info.json"
+            info = json.loads(info_path.read_text())
+            info["codebase_version"] = "v2.1"
+            info_path.write_text(json.dumps(info))
+            second = self.make_staging(parent, "second")
+            with self.assertRaisesRegex(RuntimeError, "格式版本"):
+                export_episode(second, parent)
+            self.assertFalse((parent / ".lerobot_v3.saving.json").exists())
 
     def test_real_lerobot_export_decodes_rgb_and_appends_after_finalize(self):
         from lerobot.datasets import LeRobotDataset

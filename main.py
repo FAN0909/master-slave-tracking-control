@@ -21,7 +21,7 @@ from src.shared_data.robot_share_data import RobotSharedMemory
 from src.shared_data.capture_ring_buffer import CaptureRingBuffer
 from src.devices.drivers.Link_hand import LinkHand
 from src.recording.data_synchronizer import DataSynchronizer, FPS as RECORDING_FPS
-from src.recording.episode_recorder import EpisodeRecorder
+from src.recording.episode_recorder import DATASET_FORMATS, EpisodeRecorder
 
 STYLE_PATH = Path(__file__).resolve().parent / "src" / "res" / "style" / "main_window.qss"
 
@@ -528,6 +528,8 @@ class MainWindow(QMainWindow):
             health_check=self.recording_device_error,
         )
         self.episode_recorder = EpisodeRecorder(synchronizer, self)
+        for value, (label, _directory) in DATASET_FORMATS.items():
+            self.ui.comboBox_recording_format.addItem(label, value)
         self._close_after_recording = False
         self._closing_devices = False
         self._hand_recording_locked = False
@@ -569,6 +571,7 @@ class MainWindow(QMainWindow):
         busy = state in ("recording", "stopping", "saving", "discarding")
         self.ui.lineEdit_save_file_path.setReadOnly(busy)
         self.ui.lineEdit_task.setReadOnly(state != "idle")
+        self.ui.comboBox_recording_format.setEnabled(state == "idle")
         self.ui.pushButton_browse_save_path.setEnabled(not busy)
         self._lock_recording_controls(state in ("recording", "stopping"))
         if self._close_after_recording and not busy:
@@ -600,12 +603,14 @@ class MainWindow(QMainWindow):
             config_root = Path(__file__).resolve().parent / "config"
             metadata = {name: json.loads((config_root / name).read_text(encoding="utf-8"))
                         for name in ("master_arm.json", "slave_arm.json", "hand_control.json")}
-            self.episode_recorder.start(Path(path), task, metadata)
+            self.episode_recorder.start(Path(path), task, metadata,
+                                        dataset_format=self.ui.comboBox_recording_format.currentData())
         except Exception as error:
             self._lock_recording_controls(False)
             self.recording_message(f"启动采集失败：{error}", True)
             return
-        self.recording_message(f"开始采集 episode（{RECORDING_FPS} FPS）：{task}")
+        label = DATASET_FORMATS[self.episode_recorder.dataset_format][0]
+        self.recording_message(f"开始采集 {label} episode（{RECORDING_FPS} FPS）：{task}")
 
     def stop_recording(self):
         self.episode_recorder.stop()
@@ -627,7 +632,8 @@ class MainWindow(QMainWindow):
             if not path:
                 raise ValueError("保存目录不能为空")
             self.episode_recorder.save(Path(path).expanduser().resolve())
-            self.recording_message("正在后台保存 LeRobot v3 episode…")
+            label = DATASET_FORMATS[self.episode_recorder.dataset_format][0]
+            self.recording_message(f"正在后台保存 {label} episode…")
         except Exception as error:
             self.recording_message(str(error), True)
 

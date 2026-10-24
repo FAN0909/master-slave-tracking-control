@@ -1,4 +1,4 @@
-"""后台采样与暂存；用户确认保存后写入本地 LeRobot v3 数据集。"""
+"""后台采样与暂存；保存为本地 LeRobot V3 或 V2.1 数据集。"""
 
 import fcntl
 import importlib.util
@@ -17,7 +17,11 @@ from PySide6.QtCore import QObject, Signal
 from src.recording.data_synchronizer import CAMERAS, FPS, SOURCE_NAMES
 
 
-DATASET_DIR = "lerobot_v3"
+DEFAULT_FORMAT = "v3.0"
+DATASET_FORMATS = {
+    "v3.0": ("LeRobot V3", "lerobot_v3"),
+    "v2.1": ("LeRobot V2.1", "lerobot_v2_1"),
+}
 REPO_ID = "local/master_slave_tracking"
 POSITION_NAMES = [f"slave_joint_{i}_deg" for i in range(7)] + [
     "hand_thumb", "hand_palm", "hand_index", "hand_middle", "hand_ring", "hand_pinky",
@@ -28,6 +32,12 @@ SCHEMA = {
     "observation": "latest valid feedback at or before tick", "camera_order": list(CAMERAS),
     "source_order": list(SOURCE_NAMES),
 }
+
+
+def dataset_directory(dataset_format):
+    if dataset_format not in DATASET_FORMATS:
+        raise ValueError(f"不支持的采集格式：{dataset_format}")
+    return DATASET_FORMATS[dataset_format][1]
 
 
 def check_dependencies():
@@ -94,6 +104,8 @@ def export_episode(staging_dir, output_parent):
 
     staging_dir, output_parent = Path(staging_dir), Path(output_parent)
     manifest = json.loads((staging_dir / "session.json").read_text(encoding="utf-8"))
+    dataset_format = manifest.get("dataset_format", DEFAULT_FORMAT)
+    directory = dataset_directory(dataset_format)
     if manifest.get("saved_to"):
         raise RuntimeError(f"这条 episode 已保存到 {manifest['saved_to']}")
     if manifest.get("capture_error") or not manifest.get("frame_count"):
@@ -104,9 +116,9 @@ def export_episode(staging_dir, output_parent):
         raise RuntimeError("暂存 episode 缺少帧文件")
     features = dataset_features(manifest["image_shapes"])
     output_parent.mkdir(parents=True, exist_ok=True)
-    root = output_parent / DATASET_DIR
-    marker = output_parent / f".{DATASET_DIR}.saving.json"
-    with (output_parent / f".{DATASET_DIR}.lock").open("a") as lock_file:
+    root = output_parent / directory
+    marker = output_parent / f".{directory}.saving.json"
+    with (output_parent / f".{directory}.lock").open("a") as lock_file:
         try:
             fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as error:
@@ -120,6 +132,8 @@ def export_episode(staging_dir, output_parent):
                     or json.loads(schema_path.read_text(encoding="utf-8")) != SCHEMA):
                 raise RuntimeError("已有数据集与当前采集定义不一致，请选择新的保存目录")
             info = json.loads((root / "meta" / "info.json").read_text(encoding="utf-8"))
+            if info.get("codebase_version") != dataset_format:
+                raise RuntimeError("已有数据集的格式版本与所选格式不一致，请选择新的保存目录")
             if info["fps"] != manifest["fps"]:
                 raise RuntimeError("已有数据集的 FPS 不一致")
             for name, feature in features.items():
@@ -133,10 +147,14 @@ def export_episode(staging_dir, output_parent):
         _write_json(marker, {"staging_dir": str(staging_dir.resolve()), "existing_dataset": existing})
         dataset = None
         try:
-            options = dict(repo_id=REPO_ID, root=export_root, encoder_threads=2,
+            # V2.1 复用官方流式编码器，每条 episode 独立编码后按旧版规范整理。
+            encoding_root = export_root if dataset_format == "v3.0" else staging_dir / "encoding_v3"
+            if dataset_format == "v2.1" and encoding_root.exists():
+                shutil.rmtree(encoding_root)
+            options = dict(repo_id=REPO_ID, root=encoding_root, encoder_threads=2,
                            rgb_encoder=RGBEncoderConfig(vcodec="h264", crf=20, preset="fast"),
                            video_backend="pyav", streaming_encoding=True, encoder_queue_maxsize=10)
-            if existing:
+            if existing and dataset_format == "v3.0":
                 dataset = LeRobotDataset.resume(**options)
             else:
                 dataset = LeRobotDataset.create(**options, fps=manifest["fps"], features=features,
@@ -146,7 +164,12 @@ def export_episode(staging_dir, output_parent):
                 dataset.add_frame(_dataset_frame(path, index, manifest))
             dataset.save_episode()
             dataset.finalize()
+            if dataset_format == "v2.1":
+                from src.recording.lerobot_v21 import write_episode_v21
+                episode_index = write_episode_v21(encoding_root, export_root, manifest)
+                shutil.rmtree(encoding_root)
             _write_json(export_root / "meta" / "recording_schema.json", SCHEMA)
+            manifest["dataset_format"] = dataset_format
             manifest["saved_to"] = str(root.resolve())
             manifest["episode_index"] = episode_index
             sessions = export_root / "meta" / "recording_sessions"
@@ -186,6 +209,7 @@ class EpisodeRecorder(QObject):
         self.frame_count = 0
         self.capture_error = ""
         self.staging_dir = None
+        self.dataset_format = DEFAULT_FORMAT
         self._threads = []
         self._stop = Event()
         self._capture_done = Event()
@@ -206,11 +230,12 @@ class EpisodeRecorder(QObject):
                 self.capture_error = str(error)
         self._stop.set()
 
-    def start(self, output_parent, task, metadata=None):
+    def start(self, output_parent, task, metadata=None, *, dataset_format=DEFAULT_FORMAT):
         if self.state != "idle":
             raise RuntimeError("请先保存或丢弃上一条 episode")
         if not task.strip():
             raise ValueError("任务描述不能为空")
+        dataset_directory(dataset_format)
         check_dependencies()
         self.synchronizer.reset()
         self.synchronizer.align_at(monotonic_ns(), 0)  # 启动前检查，不进入正式 episode。
@@ -218,7 +243,9 @@ class EpisodeRecorder(QObject):
         output_parent.mkdir(parents=True, exist_ok=True)
         self.staging_dir = Path(tempfile.mkdtemp(prefix=".episode_", dir=output_parent))
         self.frame_count, self.capture_error = 0, ""
+        self.dataset_format = dataset_format
         self._manifest = {"fps": self.synchronizer.fps, "task": task.strip(),
+                          "dataset_format": dataset_format,
                           "frame_count": 0, "capture_error": "", "start_timestamp_ns": None,
                           "image_shapes": {}, "schema": SCHEMA, "device_config": metadata or {}}
         _write_json(self.staging_dir / "session.json", self._manifest)
@@ -308,7 +335,7 @@ class EpisodeRecorder(QObject):
             self._set_state("stopped")
             self.save_finished.emit(False, f"保存失败：{error}；暂存数据：{self.staging_dir}")
             return
-        message = f"已保存 episode {index} 到 {output_parent / DATASET_DIR}"
+        message = f"已保存 episode {index} 到 {output_parent / dataset_directory(self.dataset_format)}"
         try:
             shutil.rmtree(self.staging_dir)
             self.staging_dir = None
